@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Focus Gardien</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<!-- ============ Fenêtre principale ============ -->
+<div class="app" id="shell" hidden>
+  <header class="top">
+    <div class="mark"><i></i>Focus</div>
+    <span class="etat" id="etat"><i></i><span id="etatT">Mode focus éteint</span></span>
+  </header>
+
+  <main class="main"><div class="col">
+    <!-- Accueil -->
+    <section class="page on" id="p-accueil">
+      <label class="focus" id="focusCard">
+        <div class="grow"><b>Mode focus</b><small id="focusTxt">Éteint : tes apps sont libres.</small></div>
+        <span class="sw big"><input type="checkbox" id="focusSw"><i></i></span>
+      </label>
+      <div class="timer" id="timer">
+        <div class="ph" id="ringPh">pomodoro</div>
+        <div class="t" id="ringT">25<i>:</i>00</div>
+        <div class="track"><i id="pbar"></i></div>
+        <div class="cycle" id="cycle"></div>
+        <button class="btn primary big" id="btnPomo">Démarrer</button>
+      </div>
+      <p class="resume" id="resume"></p>
+    </section>
+
+    <!-- Statistiques -->
+    <section class="page" id="p-stats">
+      <h1 class="h">Statistiques</h1>
+      <p class="note">Tes 14 derniers jours.</p>
+      <div class="nums">
+        <div class="num"><div class="lbl">Concentré</div><div class="v" id="sMin">0</div></div>
+        <div class="num"><div class="lbl">Résistées</div><div class="v" id="sRes">0</div></div>
+        <div class="num"><div class="lbl">Pomodoros</div><div class="v" id="sPomo">0</div></div>
+        <div class="num"><div class="lbl">Série 🔥</div><div class="v" id="sSerie">0</div></div>
+      </div>
+      <div class="stack">
+        <div class="card"><div class="lbl">Minutes concentré, par jour</div><div class="chart" id="chMin"></div></div>
+        <div class="card"><div class="lbl">Tentations résistées, par jour</div><div class="chart" id="chRes"></div></div>
+      </div>
+      <details><summary>Voir le tableau</summary><div class="card" style="margin-top:10px"><table class="tbl" id="tbl"></table></div></details>
+    </section>
+
+    <!-- Apps -->
+    <section class="page" id="p-apps">
+      <h1 class="h">Apps surveillées</h1>
+      <p class="note">Quand le mode focus est allumé, ces apps sont mises en pause et je t'interroge.</p>
+      <div class="stack">
+        <div class="card list" id="appList"></div>
+        <div class="card">
+          <div class="lbl" style="margin-bottom:10px">Ajouter par nom</div>
+          <div class="row" style="flex-wrap:nowrap"><input class="in" id="addName" placeholder="ex. discord" autocomplete="off"><button class="btn primary" id="btnAdd">Ajouter</button></div>
+        </div>
+        <div class="card">
+          <div class="row" style="justify-content:space-between;margin-bottom:10px"><div class="lbl">Programmes ouverts</div><button class="btn small" id="btnRefresh">↻ Actualiser</button></div>
+          <div class="chips" id="running"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Devoirs -->
+    <section class="page" id="p-devoirs">
+      <h1 class="h">Devoirs</h1>
+      <p class="note">Une ligne par mot : <b>question = réponse</b>. Les calculs sont créés tout seuls.</p>
+      <div class="stack">
+        <textarea class="in" id="vocab" spellcheck="false"></textarea>
+        <div class="row"><button class="btn primary" id="btnVocab">Enregistrer</button><span class="msg" id="vocabMsg"></span></div>
+      </div>
+    </section>
+
+    <!-- Réglages -->
+    <section class="page" id="p-reglages">
+      <h1 class="h">Réglages</h1>
+      <div class="stack">
+        <div class="card list">
+          <div class="item"><div class="nm"><b>Sons et confettis</b></div><label class="sw"><input type="checkbox" id="rSons"><i></i></label></div>
+          <div class="item"><div class="nm"><b>Mini Gardien sur l'écran</b><small>il se promène, grimpe et te parle</small></div><label class="sw"><input type="checkbox" id="rCompagnon"><i></i></label></div>
+          <div class="item"><div class="nm"><b>Démarrer avec Windows</b></div><label class="sw"><input type="checkbox" id="rDemarrage"><i></i></label></div>
+          <div class="item"><div class="nm"><b>Travail</b><small>minutes par Pomodoro</small></div><input class="in" type="number" min="1" max="120" id="rTravail"></div>
+          <div class="item"><div class="nm"><b>Pause</b><small>minutes</small></div><input class="in" type="number" min="1" max="120" id="rPause"></div>
+        </div>
+        <div class="card">
+          <div class="lbl">Mot de passe</div>
+          <p class="note" style="margin:6px 0 12px" id="mdpInfo">Il faut ce mot de passe pour quitter le Gardien.</p>
+          <div class="stack" style="margin-top:0;gap:10px">
+            <label class="field" id="mdpOldF"><span>Actuel</span><input class="in" type="password" id="mdpOld"></label>
+            <label class="field"><span>Nouveau</span><input class="in" type="password" id="mdpNew" placeholder="au moins 4 caractères"></label>
+          </div>
+          <div class="row" style="margin-top:12px"><button class="btn primary" id="btnMdp">Enregistrer</button><span class="msg" id="mdpMsg"></span></div>
+        </div>
+        <p class="note" id="version" style="text-align:center"></p>
+      </div>
+    </section>
+  </div></main>
+
+  <nav class="tabs">
+    <button class="nav" data-page="accueil" aria-current="page">Accueil</button>
+    <button class="nav" data-page="stats">Stats</button>
+    <button class="nav" data-page="apps">Apps</button>
+    <button class="nav" data-page="devoirs">Devoirs</button>
+    <button class="nav" data-page="reglages">Réglages</button>
+    <button class="nav quit" id="btnQuit">Quitter</button>
+  </nav>
+</div>
+
+<!-- ============ Interrogatoire / notification / mini Gardien ============ -->
+<div class="stage" id="stage" hidden></div>
+
+<!-- ============ Modales ============ -->
+<div class="modal" id="mQuit" hidden>
+  <div class="win"><div class="body">
+    <div class="q-badge">🥺</div>
+    <h2 class="q-title" style="font-size:28px">Tu veux vraiment me renvoyer ?</h2>
+    <p class="q-joke" style="margin-bottom:16px">Sans moi, qui va te protéger de toi-même ?</p>
+    <label class="field" id="quitF"><span>Mot de passe</span><input class="in" type="password" id="quitPw"></label>
+    <p class="msg bad" id="quitMsg"></p>
+    <div class="row" style="margin-top:16px"><button class="btn primary" id="quitStay">Je reste</button><button class="btn danger" id="quitGo">Quitter le Gardien</button></div>
+  </div></div>
+</div>
+
+<div class="modal" id="mWelcome" hidden>
+  <div class="win"><div class="body">
+    <div class="q-badge">🛡️</div>
+    <h2 class="q-title" style="font-size:30px">Salut ! Je suis ton Gardien.</h2>
+    <p class="q-joke" style="margin-bottom:16px">Allume le <b>mode focus</b> quand tu veux bosser : si tu ouvres un jeu, je te pose des questions. Mauvaise réponse, je le ferme.</p>
+    <label class="field"><span>Mot de passe pour pouvoir me quitter</span><input class="in" type="password" id="wPw" placeholder="au moins 4 caractères"></label>
+    <div class="item" style="padding:14px 0 0;border:0"><div class="nm"><b>Démarrer avec Windows</b></div><label class="sw"><input type="checkbox" id="wStart" checked><i></i></label></div>
+    <p class="msg bad" id="wMsg"></p>
+    <button class="btn primary block" style="margin-top:14px" id="wGo">C'est parti</button>
+  </div></div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
