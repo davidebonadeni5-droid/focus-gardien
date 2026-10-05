@@ -32,8 +32,10 @@ toute seule (jamais pendant un Pomodoro). Le mini Gardien te l'annonce.
 - **L'interrogatoire** : une blague (moqueur, coach, robot ou dramatique), 3 questions, une carte de révision
   Dadotest (ou un calcul), 10 secondes de réflexion, puis le verdict : refusé, ou 5 à 15 minutes accordées.
 - **Pomodoro** : 25 min de travail / 5 min de pause (réglable).
-- **Mini Gardien** : il marche en bas de l'écran, **grimpe les bords avec sa corde**, **marche au plafond**, lâche prise et **tombe en
-  rebondissant**. Attrape-le à la souris et **lance-le**. Clique pour qu'il parle, double-clique pour ouvrir l'app.
+- **Mini Gardien** (avec des mains et des pieds) : il marche en bas de l'écran, **monte les bords en jetpack** 🚀,
+  **marche au plafond**, puis **redescend en parachute** 🪂 en se balançant (et atterrit avec style 😎). Parfois il oublie
+  son parachute… Attrape-le à la souris et **lance-le** : lancé haut, il ouvre son parachute. Clique pour qu'il parle,
+  double-clique pour ouvrir l'app.
 - **Stats** : minutes concentré et tentations résistées sur 14 jours, série de jours 🔥.
 - **Apps** : les jeux sont déjà cochés (Steam, Epic, Roblox, Minecraft, Riot, Valorant, Fortnite…), plus tous les jeux
   des dossiers Steam, Epic, Riot, Ubisoft. Ajoute une app par son nom ou en cliquant sur un programme ouvert.

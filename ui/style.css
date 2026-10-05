@@ -218,15 +218,11 @@ body.compagnon .stage{position:relative;z-index:2;width:100vw;height:100vh;displ
 .perso{position:absolute;width:100px;height:110px}
 .pose-sol .perso{left:calc(50% - 50px);bottom:0}
 .pose-plafond .perso{left:calc(50% - 50px);top:0;transform:rotate(180deg)}
-/* sur les murs : debout contre le bord, il grimpe à une corde qui descend du haut de l'écran.
-   La fenêtre est alors très haute (main.py) et le personnage reste en bas : centre à 120 px du bas. */
-.pose-mur_g .perso{left:6px;bottom:65px}
-.pose-mur_d .perso{right:6px;bottom:65px}
-.corde{display:none;position:absolute;top:0;bottom:140px;width:5px;border-radius:3px;transform-origin:50% 0;
-  background:repeating-linear-gradient(180deg,#8B5A2B 0 7px,#B07A42 7px 14px);box-shadow:1px 0 0 rgba(0,0,0,.25);animation:corde 2.4s ease-in-out infinite alternate}
-.pose-mur_g .corde{display:block;left:97px}
-.pose-mur_d .corde{display:block;right:97px}
-@keyframes corde{from{transform:rotate(-.25deg)}to{transform:rotate(.25deg)}}
+/* sur les murs : debout le long du bord, il monte (ou descend) en jetpack */
+.pose-mur_g .perso{left:4px;top:calc(50% - 55px);transform:rotate(4deg)}
+.pose-mur_d .perso{right:4px;top:calc(50% - 55px);transform:rotate(-4deg)}
+/* en parachute : personnage en bas de la fenêtre, la voile au-dessus (main.py place la fenêtre pareil) */
+.pose-parachute .perso{left:calc(50% - 50px);bottom:30px}
 .pose-chute .perso,.pose-attrape .perso{left:calc(50% - 50px);top:calc(50% - 55px)}
 .pose-attrape .perso{animation:balance .9s ease-in-out infinite alternate;transform-origin:50% 0}
 .pose-chute .perso{animation:tourne 1.2s linear infinite}
@@ -235,8 +231,10 @@ body.compagnon .stage{position:relative;z-index:2;width:100vw;height:100vh;displ
 .bulle-pos{position:absolute;width:max-content;max-width:250px}
 .pose-sol .bulle-pos{left:50%;bottom:122px;translate:-50% 0}
 .pose-plafond .bulle-pos{left:50%;top:122px;translate:-50% 0}
-.pose-mur_g .bulle-pos{left:118px;bottom:120px;translate:0 50%;max-width:165px}
-.pose-mur_d .bulle-pos{right:118px;bottom:120px;translate:0 50%;max-width:165px}
+.pose-mur_g .bulle-pos{left:116px;top:50%;translate:0 -50%;max-width:165px}
+.pose-mur_d .bulle-pos{right:116px;top:50%;translate:0 -50%;max-width:165px}
+.pose-parachute .bulle-pos{left:4px;bottom:95px;max-width:calc(50% - 62px)}
+.pose-parachute .bulle{font-size:12px;padding:7px 9px}
 .pose-chute .bulle-pos,.pose-attrape .bulle-pos{left:50%;bottom:calc(50% + 66px);translate:-50% 0}
 .bulle{position:relative;margin:0;padding:9px 12px;border-radius:14px;
   background:#FFFDF8;border:1.5px solid #1A1A18;color:#1A1A18;
@@ -247,31 +245,63 @@ body.compagnon .stage{position:relative;z-index:2;width:100vw;height:100vh;displ
   border-right:1.5px solid #1A1A18;border-bottom:1.5px solid #1A1A18;transform:rotate(45deg)}
 .pose-plafond .bulle::after{bottom:auto;top:-7px;transform:rotate(225deg)}
 .pose-mur_g .bulle::after{left:-1px;top:50%;bottom:auto;margin:-6px 0 0 -6px;transform:rotate(135deg)}
-.pose-mur_d .bulle::after{left:auto;right:-7px;top:50%;bottom:auto;margin-top:-6px;transform:rotate(-45deg)}
+.pose-mur_d .bulle::after,.pose-parachute .bulle::after{left:auto;right:-7px;top:50%;bottom:auto;margin-top:-6px;transform:rotate(-45deg)}
 .bonhomme{width:100px;height:110px;cursor:grab;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
 .bonhomme svg{width:100%;height:100%;overflow:visible}
 .bonhomme .corps{transform-origin:50px 90px;animation:respire 3s ease-in-out infinite}
 .bonhomme.marche .corps{animation:sautille .36s ease-in-out infinite}
-.bonhomme.content .corps{animation:saute .5s cubic-bezier(.3,1.6,.5,1) 2}
+.bonhomme.content .corps,.bonhomme.atterrit .corps{animation:saute .5s cubic-bezier(.3,1.6,.5,1) 2}
 .bonhomme.gauche svg{transform:scaleX(-1)}
-.bonhomme .jambe{transform-box:fill-box;transform-origin:50% 0}
-.bonhomme.marche .j1{animation:pas .36s ease-in-out infinite}
-.bonhomme.marche .j2{animation:pas .36s ease-in-out infinite reverse}
+/* membres : on tourne autour de la hanche / de l'épaule (coordonnées du dessin) */
+.bonhomme .jambe,.bonhomme .bras{transform-box:view-box}
+.bonhomme .jg{transform-origin:41.5px 80px}.bonhomme .jd{transform-origin:58.5px 80px}
+.bonhomme .bg{transform-origin:22px 56px}.bonhomme .bd{transform-origin:78px 56px}
+.bonhomme.marche .jg{animation:pas .36s ease-in-out infinite alternate}
+.bonhomme.marche .jd{animation:pas .36s ease-in-out infinite alternate-reverse}
+.bonhomme.marche .bg{animation:balance-bras .36s ease-in-out infinite alternate-reverse}
+.bonhomme.marche .bd{animation:balance-bras .36s ease-in-out infinite alternate}
+.bonhomme.content .bd,.bonhomme.coucou .bd{animation:coucou .28s ease-in-out 6 alternate}
 .bonhomme .oeil{transform-box:fill-box;transform-origin:50% 50%;animation:cligne 4.5s infinite}
 .bonhomme .bouche{transform-box:fill-box;transform-origin:50% 0}
 .bonhomme.parle .bouche{animation:parle .22s ease-in-out infinite alternate}
-.bonhomme .bras{transform-box:fill-box;transform-origin:20% 90%}
-.bonhomme.content .bras,.bonhomme.coucou .bras{animation:coucou .3s ease-in-out 6 alternate}
 .bonhomme .plume{transform-box:fill-box;transform-origin:50% 100%;animation:plume 1.6s ease-in-out infinite alternate}
 .ombre{transform-origin:50% 50%;animation:ombre 3s ease-in-out infinite}
 .bonhomme.marche .ombre{animation:none}
 @keyframes respire{50%{transform:scaleY(.96) scaleX(1.03)}}
 @keyframes sautille{50%{transform:translateY(-4px)}}
 @keyframes saute{40%{transform:translateY(-22px) scale(1.04,.96)}}
-@keyframes pas{0%{transform:rotate(22deg)}100%{transform:rotate(-22deg)}}
+@keyframes pas{from{transform:rotate(24deg)}to{transform:rotate(-24deg)}}
+@keyframes balance-bras{from{transform:rotate(22deg)}to{transform:rotate(-22deg)}}
 @keyframes cligne{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
 @keyframes parle{from{transform:scaleY(.4)}to{transform:scaleY(1.4)}}
-@keyframes coucou{from{transform:rotate(0)}to{transform:rotate(-40deg)}}
+@keyframes coucou{from{transform:rotate(-120deg)}to{transform:rotate(-165deg)}}
 @keyframes plume{to{transform:rotate(12deg)}}
 @keyframes ombre{50%{transform:scaleX(.92)}}
-.pose-mur_g .ombre,.pose-mur_d .ombre,.pose-plafond .ombre,.pose-chute .ombre,.pose-attrape .ombre{display:none}
+
+/* jetpack */
+.bonhomme .jet,.bonhomme .para,.bonhomme .haut{display:none}
+.bonhomme.jet .jet{display:block}
+.bonhomme .fl{transform-box:fill-box;transform-origin:50% 0;animation:flamme .12s ease-in-out infinite alternate}
+.bonhomme .fl+.fl{animation-delay:-.06s}
+.bonhomme.descend .fl{animation-name:flamme-petite}
+.bonhomme.jet:not(.vole) .fl{animation-name:flamme-petite}
+@keyframes flamme{from{transform:scale(.85,.8)}to{transform:scale(1.1,1.25)}}
+@keyframes flamme-petite{from{transform:scale(.6,.35)}to{transform:scale(.75,.55)}}
+.bonhomme.vole .corps{animation:plane .5s ease-in-out infinite alternate}
+@keyframes plane{from{transform:translateY(-2px)}to{transform:translateY(2px)}}
+.bonhomme.jet .jg,.bonhomme.jet .jd{animation:pendouille 1s ease-in-out infinite alternate}
+.bonhomme.jet .jd{animation-delay:-.5s}
+@keyframes pendouille{from{transform:rotate(8deg)}to{transform:rotate(-8deg)}}
+
+/* parachute : se balance doucement, bras levés */
+.bonhomme.para .para,.bonhomme.para .haut,.bonhomme.tombe .haut,.bonhomme.atterrit .haut{display:block}
+.bonhomme.para .bras,.bonhomme.tombe .bras,.bonhomme.atterrit .bras{display:none}
+.bonhomme.para svg{transform-origin:50px -90px;animation:voile 2.4s ease-in-out infinite alternate}
+@keyframes voile{from{transform:rotate(-7deg)}to{transform:rotate(7deg)}}
+.bonhomme.para .jg,.bonhomme.para .jd{animation:pendouille 1.2s ease-in-out infinite alternate}
+.bonhomme.para .jd{animation-delay:-.6s}
+.bonhomme.replie .para{transform-box:view-box;transform-origin:50px 9px;animation:replie .55s ease-in forwards}
+@keyframes replie{to{transform:scale(.1,.05);opacity:0}}
+.bonhomme.tombe .haut{transform-box:view-box;transform-origin:50px 50px;animation:panique .14s linear infinite alternate}
+@keyframes panique{from{transform:rotate(-10deg)}to{transform:rotate(10deg)}}
+.pose-mur_g .ombre,.pose-mur_d .ombre,.pose-plafond .ombre,.pose-chute .ombre,.pose-attrape .ombre,.pose-parachute .ombre{display:none}

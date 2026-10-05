@@ -383,7 +383,6 @@ class Appli:
         self.promenade = Promenade(zone_de_travail())
         prochaine_zone = 0
         taille = None  # taille réelle de la fenêtre (peut être agrandie par la mise à l'échelle Windows)
-        hauteur_actuelle = None
         while not self.gardien.arret.is_set():
             fen = self.compagnon
             if not fen or not self.compagnon_visible or self.fumee:
@@ -397,17 +396,11 @@ class Appli:
                 curseur, bouton = souris() if p.mode == "attrape" else (None, False)
                 if taille is None:
                     taille = (fen.width or self.LARGEUR_C, fen.height or self.HAUTEUR_C)
-                change = p.pas(curseur, bouton)
-                haut = p.hauteur_mur(taille[1]) if p.sur_un_mur else taille[1]
-                if haut != hauteur_actuelle:  # la corde : fenêtre haute sur les murs, normale ailleurs
-                    fen.resize(int(taille[0]), int(haut))
-                    hauteur_actuelle = haut
-                    x, y = p.position_fenetre(taille[0], haut)
-                    fen.move(int(x), int(y))
-                if change:
-                    fen.evaluate_js(f"window.compagnon && compagnon.pose('{p.mode}', {p.sens}, {'true' if p.pause > 0 else 'false'})")
+                if p.pas(curseur, bouton):
+                    fen.evaluate_js(f"window.compagnon && compagnon.pose('{p.mode}', {p.sens}, "
+                                    f"{'true' if p.pause > 0 else 'false'}, {'true' if p.atterri else 'false'})")
                 if p.en_mouvement:
-                    x, y = p.position_fenetre(taille[0], haut)
+                    x, y = p.position_fenetre(*taille)
                     fen.move(int(x), int(y))
             except Exception:
                 pass

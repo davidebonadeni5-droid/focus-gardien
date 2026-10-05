@@ -5,6 +5,7 @@ Pur calcul (aucune fenêtre ici) : main.py appelle `pas()` toutes les 30 ms et p
 avec `position_fenetre()`. Coordonnées en pixels écran ; (cx, cy) = centre du personnage.
 """
 
+import math
 import random
 
 DEMI = 55  # demi-taille du personnage (pieds à DEMI px du centre)
@@ -12,7 +13,8 @@ VITESSE = 2.2  # px par pas en marchant / grimpant
 GRAVITE = 1.1
 REBOND = 0.45
 
-# modes : "sol", "mur_g", "mur_d", "plafond", "chute", "attrape"
+PARACHUTE_VY = 1.5  # px par pas : descente douce
+# modes : "sol", "mur_g", "mur_d", "plafond", "chute", "parachute", "attrape"
 
 
 class Promenade:
@@ -28,6 +30,9 @@ class Promenade:
         self.avant_attrape = None
         self.bouge_pendant_attrape = 0.0
         self.dernier_curseur = None
+        self.oubli = False  # il a « oublié » son parachute : chute libre jusqu'en bas
+        self.t = 0
+        self.atterri = False  # vient de se poser en parachute (pour la petite pose de l'interface)
 
     # ---------- utilitaires ----------
     def _poser(self, mode, sens=None):
@@ -46,16 +51,19 @@ class Promenade:
 
     @property
     def en_mouvement(self):
-        return self.mode in ("chute", "attrape") or self.pause <= 0
+        return self.mode in ("chute", "parachute", "attrape") or self.pause <= 0
 
     # ---------- un pas ----------
     def pas(self, curseur=None, bouton=False):
         """Avance d'un pas. Renvoie True si le mode ou le sens a changé (l'interface doit se mettre à jour)."""
         avant = (self.mode, self.sens, self.pause > 0)
+        self.atterri = False
         if self.mode == "attrape":
             self._attrape(curseur, bouton)
         elif self.mode == "chute":
             self._chute()
+        elif self.mode == "parachute":
+            self._parachute()
         else:
             self._marche()
         return avant != (self.mode, self.sens, self.pause > 0)
@@ -82,13 +90,17 @@ class Promenade:
                 # simple clic : il reste où il était
                 self.mode, self.sens, self.cx, self.cy = self.avant_attrape
             else:
-                self.mode = "chute"
+                self.mode, self.oubli = "chute", False
                 self.vx = max(-35, min(35, self.vx))
                 self.vy = max(-35, min(35, self.vy))
             self.avant_attrape = None
 
     def _chute(self):
         g, h, d, b = self.zone
+        # lancé (ou tombé) haut : il ouvre son parachute en redescendant
+        if not self.oubli and self.vy > 2 and self.cy < h + (b - h) * 0.55:
+            self.mode, self.vx = "parachute", self.vx * 0.3
+            return
         self.vy += GRAVITE
         self.vx *= 0.99
         self.cx += self.vx
@@ -108,6 +120,22 @@ class Promenade:
                 self.vx = self.vy = 0.0
                 self._poser("sol", self.r.choice([-1, 1]))
                 self.pause = 40
+                self.oubli = False
+
+    def _parachute(self):
+        """Descente douce en se balançant, puis atterrissage et petite pose."""
+        g, h, d, b = self.zone
+        self.t += 1
+        self.vy = PARACHUTE_VY
+        self.cx += math.sin(self.t / 22) * 1.3 + self.vx
+        self.vx *= 0.96
+        self.cy += self.vy
+        self.cx = max(g + DEMI, min(d - DEMI, self.cx))
+        if self.cy >= b - DEMI:
+            self.vx = self.vy = 0.0
+            self._poser("sol", self.r.choice([-1, 1]))
+            self.pause = 70
+            self.atterri = True
 
     def _marche(self):
         g, h, d, b = self.zone
@@ -119,7 +147,12 @@ class Promenade:
             self.pause = self.r.randint(60, 250)
             return
         if self.mode in ("mur_g", "mur_d", "plafond") and self.r.random() < 0.0012:
-            self.mode, self.vx, self.vy = "chute", 0.0, 0.0
+            # il lâche prise : parachute la plupart du temps… sauf quand il l'oublie
+            self.oubli = self.r.random() < 0.15
+            self.mode, self.vx, self.vy = ("chute" if self.oubli else "parachute"), 0.0, 0.0
+            return
+        if self.mode == "plafond" and self.r.random() < 0.003:
+            self.mode, self.vx, self.vy, self.oubli = "parachute", 0.0, 0.0, False  # il saute du plafond
             return
 
         if self.mode == "sol":
@@ -156,25 +189,17 @@ class Promenade:
             self.sens = sens_retour
 
     # ---------- placement de la fenêtre ----------
-    @property
-    def sur_un_mur(self):
-        return self.mode in ("mur_g", "mur_d")
-
-    def hauteur_mur(self, hauteur):
-        """Sur un mur, la fenêtre est très haute : la corde part au-dessus du haut de l'écran."""
-        g, h, d, b = self.zone
-        return (b - h) + hauteur + 120
-
     def position_fenetre(self, largeur, hauteur):
-        """Coin haut-gauche de la fenêtre pour que le personnage touche le bon bord de l'écran.
-        Sur un mur, `hauteur` est la grande hauteur et le personnage est à 120 px du bas de la fenêtre."""
+        """Coin haut-gauche de la fenêtre pour que le personnage touche le bon bord de l'écran."""
         g, h, d, b = self.zone
         if self.mode == "sol":
             return self.cx - largeur / 2, b - hauteur
         if self.mode == "plafond":
             return self.cx - largeur / 2, h
-        if self.mode == "mur_g":
-            return g, self.cy - (hauteur - 120)
+        if self.mode == "mur_g":  # jetpack le long du bord gauche
+            return g, self.cy - hauteur / 2
         if self.mode == "mur_d":
-            return d - largeur, self.cy - (hauteur - 120)
+            return d - largeur, self.cy - hauteur / 2
+        if self.mode == "parachute":  # personnage en bas de la fenêtre, la voile au-dessus
+            return self.cx - largeur / 2, self.cy - (hauteur - 85)
         return self.cx - largeur / 2, self.cy - hauteur / 2

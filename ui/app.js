@@ -649,20 +649,46 @@ const BONHOMME = `
 <svg viewBox="0 0 100 110" aria-hidden="true">
   <defs>
     <linearGradient id="bc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFC556"/><stop offset="1" stop-color="#E0862B"/></linearGradient>
+    <linearGradient id="tank" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6E7781"/><stop offset=".45" stop-color="#C9D1D9"/><stop offset="1" stop-color="#6E7781"/></linearGradient>
   </defs>
   <ellipse class="ombre" cx="50" cy="104" rx="24" ry="4.5" fill="rgba(0,0,0,.35)"/>
+  <!-- parachute (ambre et blanc), tenu à deux mains -->
+  <g class="para">
+    <g stroke="#7A5524" stroke-width=".9"><line x1="8" y1="-38" x2="45" y2="9"/><line x1="30" y1="-40" x2="45" y2="9"/><line x1="70" y1="-40" x2="55" y2="9"/><line x1="92" y1="-38" x2="55" y2="9"/></g>
+    <path d="M6 -38 Q50 -112 94 -38 Q86 -44 78 -38 Q70 -44 62 -38 Q56 -44 50 -38 Q44 -44 38 -38 Q30 -44 22 -38 Q14 -44 6 -38Z" fill="#FFFDF8" stroke="#9A5A12" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M50 -94 C26 -92 10 -64 6 -38 Q14 -44 22 -38 C26 -60 38 -86 50 -94Z" fill="#F0A020"/>
+    <path d="M50 -94 C46 -80 44 -58 38 -38 Q44 -44 50 -38 Q56 -44 62 -38 C56 -58 54 -80 50 -94Z" fill="#F0A020"/>
+    <path d="M50 -94 C74 -92 90 -64 94 -38 Q86 -44 78 -38 C74 -60 62 -86 50 -94Z" fill="#F0A020"/>
+  </g>
   <g class="corps">
-    <rect class="jambe j1" x="34" y="82" width="10" height="17" rx="5" fill="#3A2408"/>
-    <rect class="jambe j2" x="56" y="82" width="10" height="17" rx="5" fill="#3A2408"/>
+    <!-- jetpack (murs) : deux réservoirs derrière, flammes dessous -->
+    <g class="jet">
+      <g class="flammes">
+        <g class="fl"><path d="M17 74 Q7 96 17 120 Q27 96 17 74Z" fill="#FF6A1F" opacity=".9"/><path d="M17 75 Q10 92 17 110 Q24 92 17 75Z" fill="#FFA62B"/><path d="M17 76 Q13 88 17 99 Q21 88 17 76Z" fill="#FFF0A8"/></g>
+        <g class="fl"><path d="M83 74 Q73 96 83 120 Q93 96 83 74Z" fill="#FF6A1F" opacity=".9"/><path d="M83 75 Q76 92 83 110 Q90 92 83 75Z" fill="#FFA62B"/><path d="M83 76 Q79 88 83 99 Q87 88 83 76Z" fill="#FFF0A8"/></g>
+      </g>
+      <rect x="10" y="36" width="14" height="36" rx="6" fill="url(#tank)" stroke="#4A525B" stroke-width="1.5"/>
+      <rect x="76" y="36" width="14" height="36" rx="6" fill="url(#tank)" stroke="#4A525B" stroke-width="1.5"/>
+      <rect x="13" y="70" width="8" height="6" rx="1.5" fill="#3A4047"/><rect x="79" y="70" width="8" height="6" rx="1.5" fill="#3A4047"/>
+    </g>
+    <!-- jambes avec pieds (chaussures) -->
+    <g class="jambe jg"><rect x="37" y="80" width="9" height="15" rx="4.5" fill="#3A2408"/><ellipse cx="38.5" cy="96.5" rx="7.5" ry="4.3" fill="#24170A"/><ellipse cx="36.5" cy="95" rx="3" ry="1.4" fill="#5B4126"/></g>
+    <g class="jambe jd"><rect x="54" y="80" width="9" height="15" rx="4.5" fill="#3A2408"/><ellipse cx="61.5" cy="96.5" rx="7.5" ry="4.3" fill="#24170A"/><ellipse cx="63.5" cy="95" rx="3" ry="1.4" fill="#5B4126"/></g>
     <path class="plume" d="M50 16 C 44 4, 56 0, 62 6 C 56 6, 54 10, 52 16 Z" fill="#E0572B"/>
     <path d="M50 14 L82 26 C 83 52, 74 78, 50 90 C 26 78, 17 52, 18 26 Z" fill="url(#bc)" stroke="#9A5A12" stroke-width="2.5" stroke-linejoin="round"/>
     <path d="M50 20 L76 30 C 76 40, 74 46, 72 50 L 28 50 C 26 46, 24 40, 24 30 Z" fill="#FFE2A6" opacity=".35"/>
-    <g class="bras"><path d="M80 52 q 12 -4 13 -16" stroke="#9A5A12" stroke-width="6" stroke-linecap="round" fill="none"/><circle cx="93" cy="35" r="4.5" fill="#FFC556" stroke="#9A5A12" stroke-width="2"/></g>
-    <path d="M20 54 q -9 6 -8 16" stroke="#9A5A12" stroke-width="6" stroke-linecap="round" fill="none"/>
     <g class="oeil"><ellipse cx="40" cy="44" rx="6.5" ry="8" fill="#fff"/><circle cx="41.5" cy="45.5" r="3.6" fill="#071512"/><circle cx="43" cy="43.5" r="1.3" fill="#fff"/></g>
     <g class="oeil"><ellipse cx="60" cy="44" rx="6.5" ry="8" fill="#fff"/><circle cx="61.5" cy="45.5" r="3.6" fill="#071512"/><circle cx="63" cy="43.5" r="1.3" fill="#fff"/></g>
     <ellipse cx="32" cy="56" rx="4" ry="2.5" fill="#E0572B" opacity=".45"/><ellipse cx="68" cy="56" rx="4" ry="2.5" fill="#E0572B" opacity=".45"/>
     <ellipse class="bouche" cx="50" cy="60" rx="5" ry="3" fill="#5A1E08"/>
+    <!-- bras le long du corps, avec mains -->
+    <g class="bras bg"><path d="M22 56 Q14 62 13 72" stroke="#9A5A12" stroke-width="5.5" stroke-linecap="round" fill="none"/><circle cx="13" cy="74" r="5.2" fill="#FFC556" stroke="#9A5A12" stroke-width="2"/></g>
+    <g class="bras bd"><path d="M78 56 Q86 62 87 72" stroke="#9A5A12" stroke-width="5.5" stroke-linecap="round" fill="none"/><circle cx="87" cy="74" r="5.2" fill="#FFC556" stroke="#9A5A12" stroke-width="2"/></g>
+    <!-- bras levés (parachute, chute, atterrissage) -->
+    <g class="haut">
+      <path d="M26 50 Q22 28 45 10" stroke="#9A5A12" stroke-width="5.5" stroke-linecap="round" fill="none"/><circle cx="45" cy="9" r="5.2" fill="#FFC556" stroke="#9A5A12" stroke-width="2"/>
+      <path d="M74 50 Q78 28 55 10" stroke="#9A5A12" stroke-width="5.5" stroke-linecap="round" fill="none"/><circle cx="55" cy="9" r="5.2" fill="#FFC556" stroke="#9A5A12" stroke-width="2"/>
+    </g>
   </g>
 </svg>`;
 
@@ -688,7 +714,7 @@ async function initCompagnon() {
   document.documentElement.style.colorScheme = "normal";
   document.documentElement.style.background = "transparent";
   const st = $("#stage"); st.hidden = false;
-  st.innerHTML = `<div class="corde"></div><div class="bulle-pos"><div class="bulle" id="bulle"></div></div>
+  st.innerHTML = `<div class="bulle-pos"><div class="bulle" id="bulle"></div></div>
     <div class="perso"><div class="bonhomme" id="bh" title="Mini Gardien">${BONHOMME}</div></div>`;
   st.className = "stage pose-sol";
   const bh = $("#bh"), bulle = $("#bulle");
@@ -707,17 +733,28 @@ async function initCompagnon() {
 
   // pose(mode, sens, arret) : appelé par Python quand le Gardien change de bord, tombe ou se fait attraper
   let posePrec = "sol";
-  const pose = (mode, sens = -1, arret = false) => {
+  const pose = (mode, sens = -1, arret = false, atterri = false) => {
     st.className = "stage pose-" + mode;
-    const marche = !arret && ["sol", "plafond", "mur_g", "mur_d"].includes(mode);
-    bh.classList.toggle("marche", marche);
-    // sur les murs il regarde vers l'écran, la main levée tient la corde
-    bh.classList.toggle("gauche", mode === "mur_d" ? true : mode === "mur_g" ? false : mode === "plafond" ? sens > 0 : sens < 0);
+    const mur = mode === "mur_g" || mode === "mur_d";
+    bh.classList.toggle("marche", !arret && (mode === "sol" || mode === "plafond"));
+    bh.classList.toggle("jet", mur);                       // jetpack sur les murs
+    bh.classList.toggle("descend", mur && sens > 0);        // petites flammes en descendant
+    bh.classList.toggle("vole", mur && !arret);
+    bh.classList.toggle("para", mode === "parachute");
+    bh.classList.toggle("tombe", mode === "chute" || mode === "attrape");
+    bh.classList.toggle("gauche", mur ? false : mode === "plafond" ? sens > 0 : sens < 0);
+    if (atterri) {  // il replie le parachute, puis petite pose stylée
+      bh.classList.add("para", "replie");
+      setTimeout(() => { bh.classList.remove("para", "replie"); bh.classList.add("atterrit"); }, 550);
+      setTimeout(() => bh.classList.remove("atterrit"), 2200);
+    }
     if (mode !== posePrec) {
-      if (mode === "chute") dire(posePrec === "mur_g" || posePrec === "mur_d" ? pick(["La corde a lâché ! 😱", "Aaaaah, ma corde !!"]) : pick(["Aaaaah ! 😱", "Woooo ! 🪂", "Je glisse !!"]), 2500);
+      if (mode === "chute") dire(mur || posePrec === "mur_g" || posePrec === "mur_d" ? pick(["Plus d'essence !! 😱", "Panne de jetpack !"]) : pick(["Aaaaah ! 😱", "Woooo ! 🎢", "J'ai oublié mon parachute !!"]), 2500);
+      else if (mode === "parachute") dire(pick(["Hop, parachute ! 🪂", "Wiii, je plane !", "Vue magnifique d'ici !"]), 3000);
       else if (mode === "attrape") dire(pick(["Hé ! Pose-moi ! 😵", "Wheee ! 🎢", "Doucement ! J'ai le vertige !"]), 3000);
+      else if (atterri) dire(pick(["Atterrissage parfait 😎", "Et… posé ! 10/10 🏅", "Parachutiste d'élite 😎"]), 3500);
       else if (posePrec === "chute" && mode === "sol") dire(pick(["Ouf… ça va 😅", "Atterrissage parfait. Enfin presque.", "Même pas mal !"]), 3500);
-      else if ((mode === "mur_g" || mode === "mur_d") && Math.random() < 0.3) dire(pick(["Je grimpe ! 🧗", "Heureusement que j'ai ma corde !", "Oh hisse ! 🪢"]), 3000);
+      else if (mur && Math.random() < 0.35) dire(pick(["Décollage ! 🚀", "Jetpack activé !", "Vroooom 🔥"]), 3000);
       else if (mode === "plafond" && Math.random() < 0.4) dire(pick(["La tête à l'envers, je réfléchis mieux 🙃", "Vue d'en haut : tu bosses bien !"]), 3500);
     }
     posePrec = mode;
@@ -725,7 +762,7 @@ async function initCompagnon() {
   window.compagnon = { pose, dire, mode: (marche, sens) => pose("sol", sens, !marche) };
 
   bh.addEventListener("mousedown", (e) => { if (e.button === 0) api.attraper(); });
-  bh.addEventListener("click", () => { if (posePrec !== "chute") dire(pick(PHRASES.clic), 4000, "coucou"); });
+  bh.addEventListener("click", () => { if (posePrec !== "chute" && posePrec !== "parachute") dire(pick(PHRASES.clic), 4000, "coucou"); });
   bh.addEventListener("dblclick", () => api.ouvrir());
 
   const tour = async () => {
