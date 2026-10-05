@@ -724,7 +724,7 @@ async function initCompagnon() {
   document.documentElement.style.colorScheme = "normal";
   document.documentElement.style.background = "transparent";
   const st = $("#stage"); st.hidden = false;
-  st.innerHTML = `<div class="zzz"><span>z</span><span>z</span><span>z</span></div><div class="bulle-pos"><div class="bulle" id="bulle"></div></div>
+  st.innerHTML = `<div class="corde-g" id="corde"></div><div class="crochet" id="crochet"><svg viewBox="0 0 28 26" width="28" height="26"><path d="M14 24V8" stroke="#4A525B" stroke-width="3" stroke-linecap="round"/><path d="M14 10c-8 0-10-5-10-8M14 10c8 0 10-5 10-8" stroke="#4A525B" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="14" cy="24" r="2.5" fill="#4A525B"/></svg></div><div class="zzz"><span>z</span><span>z</span><span>z</span></div><div class="bulle-pos"><div class="bulle" id="bulle"></div></div>
     <div class="perso"><div class="bonhomme" id="bh" title="Mini Gardien">${BONHOMME}</div></div>`;
   st.className = "stage pose-sol";
   const bh = $("#bh"), bulle = $("#bulle");
@@ -743,10 +743,37 @@ async function initCompagnon() {
 
   // pose(mode, sens, arret) : appelé par Python quand le Gardien change de bord, tombe ou se fait attraper
   let posePrec = "sol";
-  const pose = (mode, sens = -1, arret = false, atterri = false) => {
+  // grappin : lancer du crochet, montée à la corde, rétablissement sur le bord (fenêtre haute, voir main.py)
+  let anims = [];
+  const grappin = (x) => {
+    const H = x.hauteur, mains = H - 101, bord = x.bord || 60, L = Math.max(0, mains - bord);
+    const T = x.lancer + x.monte + x.reprise, o1 = x.lancer / T, o2 = (x.lancer + x.monte) / T;
+    const perso = $(".perso", st), corde = $("#corde"), crochet = $("#crochet");
+    crochet.style.top = bord - 18 + "px";
+    const opts = { duration: T, fill: "forwards" };
+    anims = [
+      // le crochet part de ses mains et s'accroche au bord de la fenêtre
+      crochet.animate([{ transform: `translateY(${L}px)`, easing: "cubic-bezier(.2,.7,.3,1)" }, { transform: "translateY(0)", offset: o1 },
+        { transform: "translateY(0)", opacity: 1, offset: 0.9 }, { transform: "translateY(0)", opacity: 0 }], opts),
+      // la corde va du crochet jusqu'à ses mains : elle se déroule, puis raccourcit pendant qu'il monte
+      corde.animate([{ top: `${mains}px`, height: "0px", easing: "cubic-bezier(.2,.7,.3,1)" }, { top: `${bord}px`, height: `${L}px`, offset: o1 },
+        { top: `${bord}px`, height: "0px", offset: o2 }, { top: `${bord}px`, height: "0px" }], opts),
+      // lui : attend le crochet, monte main après main, puis se hisse sur le bord
+      perso.animate([{ transform: "translateY(0)" }, { transform: "translateY(0)", offset: o1 },
+        { transform: `translateY(${-(H - 160)}px)`, offset: o2 },
+        { transform: `translateY(${-(H - 160) - 30}px)`, offset: o2 + (1 - o2) * 0.6 },
+        { transform: `translateY(${-(H - bord)}px)` }], opts),
+    ];
+    sfx.tic();
+  };
+
+  const pose = (mode, sens = -1, arret = false, atterri = false, extra = null) => {
+    anims.forEach((a) => a.cancel()); anims = [];
     st.className = "stage pose-" + mode;
+    if (mode === "grappin" && extra) grappin(extra);
+    bh.classList.toggle("grimpe", mode === "grappin");
     const mur = mode === "mur_g" || mode === "mur_d";
-    bh.classList.toggle("marche", !arret && (mode === "sol" || mode === "plafond"));
+    bh.classList.toggle("marche", !arret && ["sol", "plafond", "fenetre", "vers_grappin"].includes(mode));
     bh.classList.toggle("jet", mur);                       // jetpack sur les murs
     bh.classList.toggle("descend", mur && sens > 0);        // petites flammes en descendant
     bh.classList.toggle("vole", mur && !arret);
@@ -767,6 +794,8 @@ async function initCompagnon() {
       else if (atterri) dire(pick(["Atterrissage parfait 😎", "Et… posé ! 10/10 🏅", "Parachutiste d'élite 😎"]), 3500);
       else if (posePrec === "chute" && mode === "sol") dire(pick(["Ouf… ça va 😅", "Atterrissage parfait. Enfin presque.", "Même pas mal !"]), 3500);
       else if (mur && Math.random() < 0.35) dire(pick(["Décollage ! 🚀", "Jetpack activé !", "Vroooom 🔥"]), 3000);
+      else if (mode === "vers_grappin") dire(pick(["Je vais là-haut ! 🪝", "Grappin, en position !", "Cette fenêtre a l'air confortable…"]), 3000);
+      else if (mode === "fenetre" && posePrec === "grappin") dire(pick(["Et hop, sur ta fenêtre ! 😎", "Vue imprenable d'ici", "Je surveille tes onglets 👀"]), 3500);
       else if (mode === "plafond" && Math.random() < 0.4) dire(pick(["La tête à l'envers, je réfléchis mieux 🙃", "Vue d'en haut : tu bosses bien !"]), 3500);
     }
     posePrec = mode;
@@ -820,7 +849,8 @@ async function initCompagnon() {
   };
   tour();
   setInterval(tour, 3000);
-  if (P.get("pose")) pose(P.get("pose"), -1, false);
+  if (P.get("pose") === "grappin") pose("grappin", 1, false, false, { hauteur: innerHeight, bord: 150, lancer: 450, monte: 1600, reprise: 330 });
+  else if (P.get("pose")) pose(P.get("pose"), -1, false);
 }
 
 (async () => {

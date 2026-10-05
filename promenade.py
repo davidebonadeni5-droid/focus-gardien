@@ -14,7 +14,11 @@ GRAVITE = 1.1
 REBOND = 0.45
 
 PARACHUTE_VY = 3.4  # px par pas : descente douce mais pas trop longue
-# modes : "sol", "mur_g", "mur_d", "plafond", "chute", "parachute", "attrape", "dort"
+# grappin : lancer (pas), vitesse de montée à la corde (px par pas), rétablissement sur le bord (pas)
+GRAPPIN_LANCER, GRAPPIN_V, GRAPPIN_REPRISE = 16, 4.0, 12
+GRAPPIN_MARGE = 150  # px de fenêtre au-dessus du bord (crochet + tête quand il se hisse)
+# modes : "sol", "mur_g", "mur_d", "plafond", "chute", "parachute", "attrape", "dort",
+#         "vers_grappin" (marche sous une fenêtre), "grappin" (lance et monte), "fenetre" (marche sur le haut d'une fenêtre)
 
 
 class Promenade:
@@ -34,6 +38,10 @@ class Promenade:
         self.t = 0
         self.atterri = False  # vient de se poser en parachute (pour la petite pose de l'interface)
         self.dodo = False  # mode focus : il va dormir dans le coin en bas à droite et ne bouge plus
+        self.plateformes = []  # hauts de fenêtres visibles : [(gauche, droite, y)], mis à jour par main.py
+        self.plat = None  # plateforme visée ou sous ses pieds
+        self.cible_x = None
+        self.grappin = None  # {"ty", "pieds", "t", "total"}
 
     # ---------- utilitaires ----------
     def _poser(self, mode, sens=None):
@@ -52,7 +60,33 @@ class Promenade:
 
     @property
     def en_mouvement(self):
+        if self.mode == "grappin":
+            return False  # fenêtre fixe : l'interface anime le lancer et la montée
         return self.mode in ("chute", "parachute", "attrape") or self.pause <= 0
+
+    def plateforme_sous(self, plat, x=None):
+        """La plateforme existe-t-elle encore (fenêtre pas fermée, pas déplacée) ? Renvoie sa version à jour."""
+        if not plat:
+            return None
+        x = self.cx if x is None else x
+        for p in self.plateformes:
+            if abs(p[2] - plat[2]) <= 6 and p[0] - 4 <= x <= p[1] + 4:
+                return p
+        return None
+
+    def hauteur_fenetre(self, hauteur):
+        """Pendant le grappin, la fenêtre va du crochet jusqu'à ses pieds."""
+        if self.mode == "grappin" and self.grappin:
+            return int(self.grappin["pieds"] - (self.grappin["ty"] - GRAPPIN_MARGE))
+        return hauteur
+
+    def _sauter_de_la_fenetre(self, sens=0):
+        g, h, d, b = self.zone
+        haut = b - self.cy
+        self.oubli = haut < 260  # pas haut : simple saut, sinon parachute
+        self.mode = "chute" if self.oubli else "parachute"
+        self.vx, self.vy = 3.0 * sens, (-6.0 if self.oubli else 0.0)
+        self.plat = None
 
     # ---------- un pas ----------
     def pas(self, curseur=None, bouton=False):
@@ -62,6 +96,11 @@ class Promenade:
         if self.mode == "dort" and not self.dodo:  # fin du focus : il se réveille
             self.mode, self.pause = "sol", 30
         if self.dodo and self.mode != "attrape":
+            if self.mode in ("vers_grappin", "grappin"):
+                self.mode, self.grappin, self.plat = "sol", None, None
+                self.cy = self.zone[3] - DEMI
+            if self.mode == "fenetre":
+                self._sauter_de_la_fenetre()
             if self.mode in ("mur_g", "mur_d", "plafond"):
                 self.mode, self.vx, self.vy, self.oubli = "parachute", 0.0, 0.0, False  # il redescend
             elif self.mode == "sol":
@@ -74,6 +113,12 @@ class Promenade:
             self._chute()
         elif self.mode == "parachute":
             self._parachute()
+        elif self.mode == "vers_grappin":
+            self._vers_grappin()
+        elif self.mode == "grappin":
+            self._grappin()
+        elif self.mode == "fenetre":
+            self._sur_fenetre()
         else:
             self._marche()
         return avant != (self.mode, self.sens, self.pause > 0)
@@ -161,10 +206,80 @@ class Promenade:
             self.pause = 70
             self.atterri = True
 
+    # ---------- grappin et fenêtres ----------
+    def _choisir_fenetre(self):
+        """Au sol : choisit le haut d'une fenêtre ouverte pour y lancer son grappin."""
+        g, h, d, b = self.zone
+        possibles = [p for p in self.plateformes
+                     if p[1] - p[0] >= 2 * DEMI + 30 and p[2] >= h + GRAPPIN_MARGE + 20 and b - p[2] >= 160]
+        if not possibles:
+            return False
+        p = self.r.choice(possibles)
+        self.plat = p
+        self.cible_x = max(p[0] + DEMI + 10, min(p[1] - DEMI - 10, self.cx))
+        self.mode = "vers_grappin"
+        self.sens = 1 if self.cible_x > self.cx else -1
+        return True
+
+    def _vers_grappin(self):
+        p = self.plateforme_sous(self.plat, self.cible_x)
+        if not p:  # la fenêtre a disparu : tant pis
+            self.mode, self.plat = "sol", None
+            return
+        self.plat = p
+        if abs(self.cx - self.cible_x) <= VITESSE * 1.4:
+            self.cx = self.cible_x
+            pieds = self.cy + DEMI
+            monte = max(0.0, (pieds - (p[2] + 100)) / GRAPPIN_V)
+            self.grappin = {"ty": p[2], "pieds": pieds, "t": 0,
+                            "total": int(GRAPPIN_LANCER + monte + GRAPPIN_REPRISE), "monte": int(monte)}
+            self.mode = "grappin"
+            return
+        self.sens = 1 if self.cible_x > self.cx else -1
+        self.cx += VITESSE * 1.4 * self.sens
+
+    def _grappin(self):
+        gr = self.grappin
+        gr["t"] += 1
+        if not self.plateforme_sous(self.plat):  # fenêtre fermée ou déplacée : la corde lâche
+            monte = max(0, min(gr["monte"], gr["t"] - GRAPPIN_LANCER))
+            self.cy = gr["pieds"] - DEMI - monte * GRAPPIN_V
+            self.mode, self.grappin, self.oubli, self.vx, self.vy = "chute", None, True, 0.0, 0.0
+            return
+        if gr["t"] >= gr["total"]:
+            self.cy = gr["ty"] - DEMI
+            self.mode, self.grappin, self.pause = "fenetre", None, 25
+            self.sens = self.r.choice([-1, 1])
+
+    def _sur_fenetre(self):
+        p = self.plateforme_sous(self.plat)
+        if not p:  # on a fermé ou bougé sa fenêtre
+            self._sauter_de_la_fenetre()
+            return
+        self.plat, self.cy = p, p[2] - DEMI
+        if self.pause > 0:
+            self.pause -= 1
+            return
+        if self.r.random() < 0.004:
+            self.pause = self.r.randint(50, 200)
+            return
+        if self.r.random() < 0.0015:
+            self._sauter_de_la_fenetre(self.sens)
+            return
+        self.cx += VITESSE * self.sens
+        if self.cx <= p[0] + DEMI or self.cx >= p[1] - DEMI:
+            self.cx = max(p[0] + DEMI, min(p[1] - DEMI, self.cx))
+            if self.r.random() < 0.55:
+                self.sens = -self.sens  # demi-tour
+            else:
+                self._sauter_de_la_fenetre(self.sens)
+
     def _marche(self):
         g, h, d, b = self.zone
         if self.pause > 0:
             self.pause -= 1
+            return
+        if self.mode == "sol" and self.plateformes and self.r.random() < 0.0025 and self._choisir_fenetre():
             return
         # de temps en temps : petite pause, ou lâcher prise (mur / plafond)
         if self.r.random() < 0.004:
@@ -216,8 +331,12 @@ class Promenade:
     def position_fenetre(self, largeur, hauteur):
         """Coin haut-gauche de la fenêtre pour que le personnage touche le bon bord de l'écran."""
         g, h, d, b = self.zone
-        if self.mode in ("sol", "dort"):
+        if self.mode in ("sol", "dort", "vers_grappin"):
             return self.cx - largeur / 2, b - hauteur
+        if self.mode == "fenetre" and self.plat:  # pieds sur le haut de la fenêtre
+            return self.cx - largeur / 2, self.plat[2] - hauteur
+        if self.mode == "grappin" and self.grappin:  # fenêtre haute : du crochet jusqu'à ses pieds
+            return self.cx - largeur / 2, self.grappin["ty"] - GRAPPIN_MARGE
         if self.mode == "plafond":
             return self.cx - largeur / 2, h
         if self.mode == "mur_g":  # jetpack le long du bord gauche

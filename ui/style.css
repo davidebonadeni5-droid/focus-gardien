@@ -11,7 +11,8 @@
 }
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;height:100%}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-display);font-size:15px;line-height:1.5;overflow:hidden;user-select:none;-webkit-user-select:none}
+/* fond transparent tant que la vue n'est pas connue (sinon le mini Gardien apparaît un instant dans un carré) */
+body{background:transparent;color:var(--ink);font-family:var(--f-display);font-size:15px;line-height:1.5;overflow:hidden;user-select:none;-webkit-user-select:none}
 input,textarea{user-select:text;-webkit-user-select:text}
 canvas#sky,.grain{display:none}
 canvas#confetti{position:fixed;inset:0;width:100%;height:100%;z-index:50;pointer-events:none}
@@ -20,7 +21,7 @@ canvas#confetti{position:fixed;inset:0;width:100%;height:100%;z-index:50;pointer
 ::-webkit-scrollbar{width:10px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;border:3px solid var(--bg)}
 
 /* ---------- structure : en-tête, une colonne, onglets en bas ---------- */
-.app{display:grid;grid-template-rows:auto minmax(0,1fr) auto;height:100vh}
+.app{background:var(--bg);display:grid;grid-template-rows:auto minmax(0,1fr) auto;height:100vh}
 .top{display:flex;align-items:center;justify-content:space-between;padding:18px 28px 0}
 .mark{display:flex;align-items:center;gap:9px;font-weight:700;font-size:18px;letter-spacing:-.01em}
 .mark i{width:11px;height:11px;background:var(--amber);transform:rotate(45deg);border-radius:2px}
@@ -355,3 +356,22 @@ body.jeu .stage{height:100vh}
 .jeu-hud{position:absolute;left:0;right:0;top:0;display:flex;justify-content:space-between;padding:10px 12px;font:600 15px var(--f-mono);pointer-events:none}
 .jeu-hud #jInfo{font-weight:500;font-size:12px;color:var(--mute)}
 .jeu-fin{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;text-align:center;background:rgba(246,244,239,.9);padding:20px}
+
+/* ---------- grappin : crochet lancé sur le haut d'une fenêtre, montée à la corde ---------- */
+.corde-g,.crochet{display:none;position:absolute;left:calc(50% - 2px)}
+.pose-grappin .corde-g,.pose-grappin .crochet{display:block}
+.corde-g{top:60px;height:0;width:4px;border-radius:2px;
+  background:repeating-linear-gradient(180deg,#8B5A2B 0 6px,#B07A42 6px 12px)}
+.crochet{top:42px;left:calc(50% - 14px);width:28px;height:26px}
+.pose-grappin .perso{left:calc(50% - 50px);bottom:0}
+.pose-grappin .bulle-pos{display:none}
+.pose-fenetre .perso,.pose-vers_grappin .perso{left:calc(50% - 50px);bottom:0}
+.pose-fenetre .bulle-pos,.pose-vers_grappin .bulle-pos{left:50%;bottom:122px;translate:-50% 0}
+.bonhomme.grimpe .haut{display:block}
+.bonhomme.grimpe .bras{display:none}
+.bonhomme.grimpe .corps{animation:hisse .5s ease-in-out infinite alternate}
+.bonhomme.grimpe .jg,.bonhomme.grimpe .jd{animation:pendouille .5s ease-in-out infinite alternate}
+.bonhomme.grimpe .jd{animation-delay:-.25s}
+@keyframes hisse{from{transform:translateY(-2px) rotate(-3deg)}to{transform:translateY(2px) rotate(3deg)}}
+.pose-grappin .ombre,.pose-fenetre .ombre{display:none}
+body.quiz,body.toast,body.memo,body.jeu{background:var(--bg)}

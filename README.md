@@ -33,7 +33,8 @@ toute seule (jamais pendant un Pomodoro). Le mini Gardien te l'annonce.
   Dadotest (ou un calcul), 10 secondes de réflexion, puis le verdict : refusé, ou 5 à 15 minutes accordées.
 - **Pomodoro** : 25 min de travail / 5 min de pause (réglable).
 - **Mini Gardien** (avec des mains et des pieds) : il marche en bas de l'écran, **monte les bords en jetpack** 🚀,
-  **marche au plafond**, puis **redescend en parachute** 🪂 en se balançant (et atterrit avec style 😎). Parfois il oublie
+  **marche au plafond**, **monte sur tes fenêtres ouvertes avec son grappin** 🪝 (il marche sur le haut, et saute
+  si tu la fermes), puis **redescend en parachute** 🪂 en se balançant (et atterrit avec style 😎). Parfois il oublie
   son parachute… Attrape-le à la souris et **lance-le** : lancé haut, il ouvre son parachute. Clique pour qu'il parle,
   double-clique pour ouvrir l'app.
 - **En mode focus, il dort** 😴 : il va dans le coin en bas à droite, ferme les yeux (« z z z »), ne bouge plus et ne
@@ -52,6 +53,8 @@ toute seule (jamais pendant un Pomodoro). Le mini Gardien te l'annonce.
 - **Réglages** : sons, mini Gardien, démarrage avec Windows, durées, compte Dadotest.
 
 ![Mini Gardien](captures/mini-gardien.png)
+
+![Grappin](captures/grappin.png)
 
 ![Interrogatoire](captures/quiz.png)
 

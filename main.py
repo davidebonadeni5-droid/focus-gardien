@@ -22,7 +22,7 @@ from pathlib import Path
 import dadotest
 import gardien as g
 import maj
-from promenade import Promenade
+from promenade import GRAPPIN_MARGE, Promenade
 
 NOM = "Focus Gardien"
 BASE = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
@@ -112,6 +112,60 @@ def zone_de_travail():
         if ctypes.windll.user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(r), 0):  # SPI_GETWORKAREA
             return r.left, r.top, r.right, r.bottom
     return 0, 0, 1280, 720
+
+
+def fenetres_ouvertes(zone):
+    """Hauts des fenêtres ouvertes où le mini Gardien peut monter : [(gauche, droite, y)].
+    On garde seulement les morceaux de bord qui se voient (pas cachés par une fenêtre au-dessus)."""
+    if os.name != "nt":
+        return []
+    import ctypes
+    from ctypes import wintypes
+
+    u32, dwm = ctypes.windll.user32, ctypes.windll.dwmapi
+    g, h, d, b = zone
+    moi = os.getpid()
+    rects = []  # dans l'ordre de l'écran : la première est au-dessus des autres
+
+    def visite(hwnd, _):
+        if not u32.IsWindowVisible(hwnd) or u32.IsIconic(hwnd) or u32.GetWindowTextLengthW(hwnd) == 0:
+            return True
+        pid = wintypes.DWORD()
+        u32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        if pid.value == moi:
+            return True
+        cache = ctypes.c_int(0)
+        dwm.DwmGetWindowAttribute(hwnd, 14, ctypes.byref(cache), ctypes.sizeof(cache))  # DWMWA_CLOAKED
+        if cache.value:
+            return True
+        r = wintypes.RECT()
+        if dwm.DwmGetWindowAttribute(hwnd, 9, ctypes.byref(r), ctypes.sizeof(r)) != 0:  # cadre visible
+            u32.GetWindowRect(hwnd, ctypes.byref(r))
+        if r.right - r.left >= 200 and r.bottom - r.top >= 100:
+            rects.append((r.left, r.top, r.right, r.bottom))
+        return True
+
+    proto = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    u32.EnumWindows(proto(visite), 0)
+    plateformes = []
+    for i, (l, t, r, bas) in enumerate(rects):
+        if t <= h + 5 or t >= b - 100:
+            continue
+        morceaux = [(max(l, g), min(r, d))]
+        for (l2, t2, r2, b2) in rects[:i]:  # fenêtres devant : elles cachent une partie du bord
+            if t2 - 2 <= t <= b2:
+                nouveaux = []
+                for (a, z) in morceaux:
+                    if r2 <= a or l2 >= z:
+                        nouveaux.append((a, z))
+                        continue
+                    if l2 > a:
+                        nouveaux.append((a, l2))
+                    if r2 < z:
+                        nouveaux.append((r2, z))
+                morceaux = nouveaux
+        plateformes += [(a, z, t) for (a, z) in morceaux if z - a >= 170]
+    return plateformes
 
 
 def souris():
@@ -330,7 +384,7 @@ class Appli:
         api = Api(self, "main")
         self.principale = webview.create_window(
             NOM, url(), js_api=api, width=1080, height=720, min_size=(860, 600),
-            background_color="#071512", hidden=cache and not self.gardien.donnees["premier_lancement"])
+            background_color="#F6F4EF", hidden=cache and not self.gardien.donnees["premier_lancement"])
         api._fenetre = self.principale
         self.principale.events.closing += self._fermeture_principale
 
@@ -345,7 +399,7 @@ class Appli:
         api = Api(self, "quiz", app=nom)
         fen = self.webview.create_window(
             f"{NOM} — {nom}", url(), js_api=api, width=600, height=680,
-            resizable=False, on_top=True, background_color="#071512")
+            resizable=False, on_top=True, background_color="#F6F4EF")
         api._fenetre = fen
         self.quiz = fen
 
@@ -369,7 +423,7 @@ class Appli:
             pass
         fen = self.webview.create_window(
             NOM, url(), js_api=api, width=largeur, height=hauteur,
-            x=x, y=y, frameless=True, on_top=True, resizable=False, focus=False, background_color="#071512")
+            x=x, y=y, frameless=True, on_top=True, resizable=False, focus=False, background_color="#F6F4EF")
         api._fenetre = fen
 
     def ouvrir_memo(self):
@@ -439,7 +493,7 @@ class Appli:
         self.compagnon = self.webview.create_window(
             "Mini Gardien", url(), js_api=api, width=self.LARGEUR_C, height=self.HAUTEUR_C, x=x, y=y,
             frameless=True, easy_drag=False, on_top=True, transparent=True, resizable=False, focus=False,
-            shadow=False, background_color="#071512")
+            shadow=False, background_color="#F6F4EF")
         api._fenetre = self.compagnon
         self.compagnon_visible = True
         self.compagnon.events.closing += lambda: self.en_sortie
@@ -457,6 +511,8 @@ class Appli:
         self.promenade = Promenade(zone_de_travail())
         prochaine_zone = 0
         taille = None  # taille réelle de la fenêtre (peut être agrandie par la mise à l'échelle Windows)
+        hauteur_actuelle = None
+        tic = 0
         while not self.gardien.arret.is_set():
             fen = self.compagnon
             if not fen or not self.compagnon_visible or self.fumee:
@@ -471,11 +527,28 @@ class Appli:
                 curseur, bouton = souris() if p.mode == "attrape" else (None, False)
                 if taille is None:
                     taille = (fen.width or self.LARGEUR_C, fen.height or self.HAUTEUR_C)
+                tic += 1
+                if tic % 15 == 0:  # toutes les ~0,5 s : où sont les fenêtres ouvertes ?
+                    try:
+                        p.plateformes = fenetres_ouvertes(p.zone)
+                    except Exception:
+                        p.plateformes = []
                 if p.pas(curseur, bouton):
+                    extra = "null"
+                    if p.mode == "grappin" and p.grappin:  # l'interface anime le lancer et la montée
+                        gr = p.grappin
+                        extra = json.dumps({"hauteur": p.hauteur_fenetre(taille[1]), "bord": GRAPPIN_MARGE, "lancer": 450,
+                                            "monte": int(gr["monte"] * 27), "reprise": 330})
                     fen.evaluate_js(f"window.compagnon && compagnon.pose('{p.mode}', {p.sens}, "
-                                    f"{'true' if p.pause > 0 else 'false'}, {'true' if p.atterri else 'false'})")
+                                    f"{'true' if p.pause > 0 else 'false'}, {'true' if p.atterri else 'false'}, {extra})")
+                haut = p.hauteur_fenetre(taille[1])
+                if haut != hauteur_actuelle:  # grappin : fenêtre haute ; sinon taille normale
+                    fen.resize(int(taille[0]), int(haut))
+                    hauteur_actuelle = haut
+                    x, y = p.position_fenetre(taille[0], haut)
+                    fen.move(int(x), int(y))
                 if p.en_mouvement:
-                    x, y = p.position_fenetre(*taille)
+                    x, y = p.position_fenetre(taille[0], haut)
                     fen.move(int(x), int(y))
             except Exception:
                 pass
@@ -636,6 +709,8 @@ def selftest():
 
     assert UI.exists(), UI
     assert maj.version_actuelle()
+    if os.name == "nt":  # détection des fenêtres ouvertes (grappin) : doit marcher sans erreur
+        assert isinstance(fenetres_ouvertes(zone_de_travail()), list)
     Image.open(BASE / "icone.png").load()
     with tempfile.TemporaryDirectory() as tmp:
         gd = g.Gardien(Path(tmp) / "d.json")
