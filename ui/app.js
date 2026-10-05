@@ -106,7 +106,7 @@ function demo() {
     jours.push({ date: d.toISOString().slice(0, 10), minutes: m, pomodoros: Math.round(m / 25), resiste: Math.round(m / 18 + (i % 3)), accorde: i % 2 });
   }
   const st = {
-    pomo: null,
+    pomo: P.get("pause") === "1" ? { phase: "pause", fin: Date.now() + 222000 } : null,
     apps: [["steam", "Steam"], ["epicgameslauncher", "Epic Games"], ["robloxplayer", "Roblox"], ["minecraft", "Minecraft"], ["valorant", "Valorant"], ["discord", "Discord"]]
       .map(([cle, nom], i) => ({ cle, nom, actif: i !== 5 })),
     dossiers_jeux: true,
@@ -114,6 +114,8 @@ function demo() {
     reglages: { sons: true, demarrage: true, travail: 25, pause: 5, compagnon: true },
     mdp: true, premier_lancement: P.get("bienvenue") === "1", pass: {}, focus: P.get("focus") === "1", version: "12",
     compte: { nom: "david", connecte: P.get("login") !== "1", erreur: null },
+    notes: [{ id: "n1", texte: "Acheter un cahier", fait: false }, { id: "n2", texte: "Rendre le livre à Léo", fait: true }],
+    scores: { tour: 42 },
     planning: {
       devoirs: [
         { id: "t3", titre: "Rédaction : mon héros", jours: -1, nom: "Français", couleur: "#E0572B" },
@@ -157,6 +159,11 @@ function demo() {
     fermer: async () => {},
     ouvrir: async () => {},
     attraper: async () => {},
+    ouvrir_memo: async () => {}, ouvrir_jeu: async () => true,
+    note_ajouter: async (t) => { st.notes.unshift({ id: String(Date.now()), texte: t, fait: false }); },
+    note_basculer: async (id) => { const n = st.notes.find((x) => x.id === id); if (n) n.fait = !n.fait; },
+    note_supprimer: async (id) => { st.notes = st.notes.filter((x) => x.id !== id); },
+    score: async (jeu, pts) => (st.scores[jeu] = Math.max(st.scores[jeu] || 0, pts)),
     annonce_vue: async () => {},
     params: async () => Object.fromEntries(P),
   };
@@ -264,6 +271,7 @@ function rendreAccueil() {
   const reste = p ? p.reste : total, prog = p ? p.progres : 0;
   minuteur(reste, prog, phase, etat.stats.aujourdhui.pomodoros);
   $("#btnPomo").textContent = p ? "Arrêter" : "Démarrer";
+  $("#btnJeu").hidden = phase !== "pause";
   $("#btnPomo").classList.toggle("primary", !p);
 
   // mode focus : allumé à la main, ou forcé pendant le travail d'un Pomodoro
@@ -432,6 +440,7 @@ async function initMain() {
     await api.mode_focus(on);
     await rafraichir();
   };
+  $("#btnJeu").onclick = async () => { sfx.fanfare(); await api.ouvrir_jeu(); };
   $("#btnPomo").onclick = async () => {
     if (etat.pomo) { sfx.non(); await api.arreter_pomodoro(); } else { sfx.fanfare(); await api.demarrer_pomodoro(); }
     await rafraichir();
@@ -714,7 +723,7 @@ async function initCompagnon() {
   document.documentElement.style.colorScheme = "normal";
   document.documentElement.style.background = "transparent";
   const st = $("#stage"); st.hidden = false;
-  st.innerHTML = `<div class="bulle-pos"><div class="bulle" id="bulle"></div></div>
+  st.innerHTML = `<div class="zzz"><span>z</span><span>z</span><span>z</span></div><div class="bulle-pos"><div class="bulle" id="bulle"></div></div>
     <div class="perso"><div class="bonhomme" id="bh" title="Mini Gardien">${BONHOMME}</div></div>`;
   st.className = "stage pose-sol";
   const bh = $("#bh"), bulle = $("#bulle");
@@ -743,6 +752,8 @@ async function initCompagnon() {
     bh.classList.toggle("para", mode === "parachute");
     bh.classList.toggle("tombe", mode === "chute" || mode === "attrape");
     bh.classList.toggle("gauche", mur ? false : mode === "plafond" ? sens > 0 : sens < 0);
+    bh.classList.toggle("dodo", mode === "dort");
+    if (mode === "dort") { bulle.classList.remove("on"); finBulle = 0; }
     if (atterri) {  // il replie le parachute, puis petite pose stylée
       bh.classList.add("para", "replie");
       setTimeout(() => { bh.classList.remove("para", "replie"); bh.classList.add("atterrit"); }, 550);
@@ -762,7 +773,7 @@ async function initCompagnon() {
   window.compagnon = { pose, dire, mode: (marche, sens) => pose("sol", sens, !marche) };
 
   bh.addEventListener("mousedown", (e) => { if (e.button === 0) api.attraper(); });
-  bh.addEventListener("click", () => { if (posePrec !== "chute" && posePrec !== "parachute") dire(pick(PHRASES.clic), 4000, "coucou"); });
+  bh.addEventListener("click", () => { if (posePrec !== "chute" && posePrec !== "parachute") api.ouvrir_memo(); });
   bh.addEventListener("dblclick", () => api.ouvrir());
 
   const tour = async () => {
@@ -772,6 +783,10 @@ async function initCompagnon() {
     const phase = e.pomo ? e.pomo.phase : "libre";
     const reste = e.pomo ? (e.pomo.reste >= 60 ? `${Math.ceil(e.pomo.reste / 60)} min` : `${e.pomo.reste} s`) : "";
     const res = e.stats.aujourdhui.resiste;
+    if (e.focus || phase === "travail") {  // mode focus : il dort et se tait
+      avant = { phase, res, interrogatoire: e.interrogatoire };
+      return;
+    }
     if (e.annonce) {  // ex. « Nouvelle version installée ! »
       dire(e.annonce, 8000, "content"); confettis(80); api.annonce_vue();
       avant = { phase, res, interrogatoire: e.interrogatoire };
@@ -782,7 +797,7 @@ async function initCompagnon() {
       else if (res > avant.res) dire(pick(PHRASES.resiste), 6000, "content");
       else if (phase !== avant.phase) {
         if (phase === "travail" && avant.phase === "libre") dire("C'est parti ! Je ferme tout ce qui bouge 🛡️", 6000, "content");
-        else if (phase === "pause") dire("BRAVO ! Pause méritée 🎉", 7000, "content");
+        else if (phase === "pause") dire("C'est la pause ! 🎉 Clique sur moi pour jouer 🎮", 8000, "content");
         else if (phase === "travail") dire("On y retourne, champion !", 6000);
         else dire("Pomodoro arrêté. Je reste là, hein.", 5000);
       } else if (Date.now() > prochaine && Date.now() > finBulle) {
@@ -813,5 +828,57 @@ async function initCompagnon() {
     try { P = new URLSearchParams(await b.params()); VUE = P.get("vue") || "main"; } catch { /* vue par défaut */ }
   }
   animerCiel();
-  ({ main: initMain, quiz: initQuiz, toast: initToast, compagnon: initCompagnon }[VUE] || initMain)();
+  // ============================== pense-bête ==============================
+async function initMemo() {
+  document.body.classList.add("memo");
+  const st = $("#stage"); st.hidden = false;
+  st.innerHTML = `<div class="memo-c">
+    <div class="memo-t"><b>Pense-bête</b><button class="x" id="mx" title="Fermer">✕</button></div>
+    <div id="mPomo"></div>
+    <div class="lbl">À faire</div><div class="list" id="mDev"></div>
+    <div class="tests" id="mTests"></div>
+    <div class="lbl" style="margin-top:14px">Mes notes</div>
+    <form id="mForm"><input class="in" id="mNote" placeholder="Ajouter une note…" autocomplete="off" maxlength="140"></form>
+    <div class="list" id="mNotes"></div></div>`;
+  const fermer = () => api.fermer();
+  $("#mx").onclick = fermer;
+  addEventListener("keydown", (e) => { if (e.key === "Escape") fermer(); });
+  addEventListener("blur", () => setTimeout(() => { if (!document.hasFocus()) fermer(); }, 150));
+  let e, sig = "";
+  const rendre = async () => {
+    try { e = await api.etat(); } catch { return; }
+    sonsActifs = e.reglages.sons;
+    const p = e.pomo;
+    $("#mPomo").innerHTML = p ? `<div class="mp ${p.phase}"><span>${p.phase === "pause" ? "Pause" : "Focus"}</span><b>${mmss(p.reste)}</b>
+      ${p.phase === "pause" ? '<button class="btn primary small" id="mJeu">Jouer 🎮</button>' : ""}</div>` : "";
+    const bj = $("#mJeu");
+    if (bj) bj.onclick = async () => { sfx.fanfare(); await api.ouvrir_jeu(); fermer(); };
+    const s2 = JSON.stringify([e.planning.devoirs, e.planning.tests, e.notes]);
+    if (s2 === sig) return;
+    sig = s2;
+    const dev = e.planning.devoirs.slice(0, 8);
+    $("#mDev").innerHTML = dev.length ? dev.map((d) => `<label class="devoir"><input type="checkbox" data-id="${esc(d.id)}">
+      <span class="pt" style="background:${esc(d.couleur)}"></span><span class="nm"><b>${esc(d.titre)}</b><small>${esc(d.nom)}</small></span>
+      <span class="quand ${d.jours !== null && d.jours <= 0 ? "urgent" : d.jours === 1 ? "bientot" : ""}">${quandTxt(d.jours)}</span></label>`).join("")
+      : `<p class="vide">${e.compte.connecte ? "Aucun devoir. 🎉" : "Connecte-toi à Dadotest."}</p>`;
+    $$("#mDev input").forEach((i) => i.onchange = async () => { i.closest(".devoir").classList.toggle("fait", i.checked); if (i.checked) sfx.ok(); await api.cocher_devoir(i.dataset.id, i.checked); setTimeout(rendre, 800); });
+    $("#mTests").innerHTML = e.planning.tests.slice(0, 3).map((t) => `<span class="test ${t.jours <= 2 ? "proche" : ""}"><span class="j">${t.jours === 0 ? "auj." : "J-" + t.jours}</span><b>${esc(t.titre)}</b></span>`).join("");
+    $("#mNotes").innerHTML = e.notes.length ? e.notes.map((n) => `<div class="devoir note ${n.fait ? "fait" : ""}"><input type="checkbox" data-n="${esc(n.id)}" ${n.fait ? "checked" : ""}>
+      <span class="nm"><b>${esc(n.texte)}</b></span><button class="x" data-s="${esc(n.id)}" title="Supprimer">✕</button></div>`).join("")
+      : '<p class="vide">Écris ici ce que tu ne veux pas oublier.</p>';
+    $$("#mNotes [data-n]").forEach((i) => i.onchange = async () => { sfx.clic(); await api.note_basculer(i.dataset.n); rendre(); });
+    $$("#mNotes [data-s]").forEach((b) => b.onclick = async () => { sfx.clic(); await api.note_supprimer(b.dataset.s); rendre(); });
+  };
+  $("#mForm").onsubmit = async (ev) => {
+    ev.preventDefault();
+    const t = $("#mNote").value.trim();
+    if (!t) return;
+    sfx.ok(); $("#mNote").value = ""; await api.note_ajouter(t); rendre();
+  };
+  await rendre();
+  setInterval(rendre, 1000);
+  $("#mNote").focus();
+}
+
+({ main: initMain, quiz: initQuiz, toast: initToast, compagnon: initCompagnon, memo: initMemo, jeu: () => window.initJeu && initJeu() }[VUE] || initMain)();
 })();

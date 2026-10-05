@@ -13,8 +13,8 @@ VITESSE = 2.2  # px par pas en marchant / grimpant
 GRAVITE = 1.1
 REBOND = 0.45
 
-PARACHUTE_VY = 1.5  # px par pas : descente douce
-# modes : "sol", "mur_g", "mur_d", "plafond", "chute", "parachute", "attrape"
+PARACHUTE_VY = 3.4  # px par pas : descente douce mais pas trop longue
+# modes : "sol", "mur_g", "mur_d", "plafond", "chute", "parachute", "attrape", "dort"
 
 
 class Promenade:
@@ -33,6 +33,7 @@ class Promenade:
         self.oubli = False  # il a « oublié » son parachute : chute libre jusqu'en bas
         self.t = 0
         self.atterri = False  # vient de se poser en parachute (pour la petite pose de l'interface)
+        self.dodo = False  # mode focus : il va dormir dans le coin en bas à droite et ne bouge plus
 
     # ---------- utilitaires ----------
     def _poser(self, mode, sens=None):
@@ -58,6 +59,15 @@ class Promenade:
         """Avance d'un pas. Renvoie True si le mode ou le sens a changé (l'interface doit se mettre à jour)."""
         avant = (self.mode, self.sens, self.pause > 0)
         self.atterri = False
+        if self.mode == "dort" and not self.dodo:  # fin du focus : il se réveille
+            self.mode, self.pause = "sol", 30
+        if self.dodo and self.mode != "attrape":
+            if self.mode in ("mur_g", "mur_d", "plafond"):
+                self.mode, self.vx, self.vy, self.oubli = "parachute", 0.0, 0.0, False  # il redescend
+            elif self.mode == "sol":
+                return self._aller_dormir() or avant != (self.mode, self.sens, self.pause > 0)
+            elif self.mode == "dort":
+                return False
         if self.mode == "attrape":
             self._attrape(curseur, bouton)
         elif self.mode == "chute":
@@ -67,6 +77,20 @@ class Promenade:
         else:
             self._marche()
         return avant != (self.mode, self.sens, self.pause > 0)
+
+    def _aller_dormir(self):
+        """Marche jusqu'au coin en bas à droite, puis s'endort."""
+        g, h, d, b = self.zone
+        cible = d - DEMI - 20
+        self.pause = 0
+        if abs(self.cx - cible) <= VITESSE * 1.6:
+            self.cx, self.mode = cible, "dort"
+            return True
+        sens = 1 if cible > self.cx else -1
+        change = sens != self.sens
+        self.sens = sens
+        self.cx += VITESSE * 1.6 * sens
+        return change
 
     def attraper(self, curseur):
         """La souris vient de cliquer sur le personnage."""
@@ -127,7 +151,7 @@ class Promenade:
         g, h, d, b = self.zone
         self.t += 1
         self.vy = PARACHUTE_VY
-        self.cx += math.sin(self.t / 22) * 1.3 + self.vx
+        self.cx += math.sin(self.t / 12) * 1.6 + self.vx
         self.vx *= 0.96
         self.cy += self.vy
         self.cx = max(g + DEMI, min(d - DEMI, self.cx))
@@ -192,7 +216,7 @@ class Promenade:
     def position_fenetre(self, largeur, hauteur):
         """Coin haut-gauche de la fenêtre pour que le personnage touche le bon bord de l'écran."""
         g, h, d, b = self.zone
-        if self.mode == "sol":
+        if self.mode in ("sol", "dort"):
             return self.cx - largeur / 2, b - hauteur
         if self.mode == "plafond":
             return self.cx - largeur / 2, h

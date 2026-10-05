@@ -116,6 +116,8 @@ class Gardien:
         d.setdefault("mdp", None)  # {"sel", "hash"}
         d.setdefault("premier_lancement", True)
         d.setdefault("dadotest", {"nom": "", "cookie": ""})  # cookie chiffré par Windows
+        d.setdefault("notes", [])  # pense-bête : [{"id", "texte", "fait"}]
+        d.setdefault("scores", {})  # meilleur score par jeu
         d.setdefault("cache_dadotest", {"plan": None, "deck": [], "quand": 0})
         return d
 
@@ -177,6 +179,40 @@ class Gardien:
         if not mdp:
             return True
         return secrets.compare_digest(hacher(essai or "", mdp["sel"]), mdp["hash"])
+
+    # ---------- pense-bête et jeux ----------
+    def note_ajouter(self, texte):
+        texte = str(texte).strip()[:140]
+        if texte:
+            self.donnees["notes"].insert(0, {"id": secrets.token_hex(4), "texte": texte, "fait": False})
+            del self.donnees["notes"][50:]
+            self.sauver()
+
+    def note_basculer(self, ident):
+        for n in self.donnees["notes"]:
+            if n["id"] == ident:
+                n["fait"] = not n["fait"]
+        self.sauver()
+
+    def note_supprimer(self, ident):
+        self.donnees["notes"] = [n for n in self.donnees["notes"] if n["id"] != ident]
+        self.sauver()
+
+    def enregistrer_score(self, jeu, points):
+        """Renvoie le meilleur score (après celui-ci)."""
+        points = max(0, int(points))
+        meilleur = max(points, int(self.donnees["scores"].get(jeu, 0)))
+        self.donnees["scores"][jeu] = meilleur
+        self.sauver()
+        return meilleur
+
+    @property
+    def en_travail(self):
+        return bool(self.pomo and self.pomo["phase"] == "travail")
+
+    @property
+    def en_pause(self):
+        return bool(self.pomo and self.pomo["phase"] == "pause")
 
     # ---------- compte Dadotest ----------
     def _garder_cookie(self):
@@ -412,6 +448,8 @@ class Gardien:
             "focus": self.focus_actif,
             "compte": {"nom": self.compte.nom, "connecte": self.compte.connecte, "erreur": self.erreur_synchro},
             "planning": self.planning(),
+            "notes": self.donnees["notes"],
+            "scores": self.donnees["scores"],
             "version": self.version,
             "annonce": self.annonce,
         }

@@ -206,6 +206,25 @@ class Api:
     def ouvrir(self):
         self._appli.montrer()
 
+    # pense-bête (clic sur le mini Gardien) et jeux de la pause
+    def ouvrir_memo(self):
+        self._appli.ouvrir_memo()
+
+    def note_ajouter(self, texte):
+        self._appli.gardien.note_ajouter(texte)
+
+    def note_basculer(self, ident):
+        self._appli.gardien.note_basculer(ident)
+
+    def note_supprimer(self, ident):
+        self._appli.gardien.note_supprimer(ident)
+
+    def ouvrir_jeu(self):
+        return self._appli.ouvrir_jeu()
+
+    def score(self, jeu, points):
+        return self._appli.gardien.enregistrer_score(str(jeu)[:20], points)
+
     def annonce_vue(self):
         self._appli.gardien.annonce = None
 
@@ -305,6 +324,8 @@ class Appli:
         self.compagnon = None
         self.compagnon_visible = False
         self.promenade = None
+        self.memo = None
+        self.jeu = None
 
         api = Api(self, "main")
         self.principale = webview.create_window(
@@ -351,12 +372,65 @@ class Appli:
             x=x, y=y, frameless=True, on_top=True, resizable=False, focus=False, background_color="#071512")
         api._fenetre = fen
 
+    def ouvrir_memo(self):
+        """Petite fenêtre « pense-bête » juste au-dessus du mini Gardien (se ferme quand on clique ailleurs)."""
+        if self.memo:
+            try:
+                self.memo.destroy()
+            except Exception:
+                pass
+            self.memo = None
+            return
+        largeur, hauteur = 380, 620
+        g_, h_, d_, b_ = zone_de_travail()
+        x, y = d_ - largeur - 20, b_ - hauteur - 20
+        if self.compagnon and self.promenade:
+            x = self.promenade.cx - largeur / 2
+            y = self.promenade.cy - 70 - hauteur
+        x = max(g_ + 8, min(d_ - largeur - 8, x))
+        y = max(h_ + 8, min(b_ - hauteur - 8, y))
+        api = Api(self, "memo")
+        fen = self.webview.create_window(NOM, url(), js_api=api, width=largeur, height=hauteur, x=int(x), y=int(y),
+                                         frameless=True, on_top=True, resizable=False, background_color="#F6F4EF")
+        api._fenetre = fen
+        self.memo = fen
+
+        def ferme():
+            self.memo = None
+            return True
+
+        fen.events.closing += ferme
+
+    def ouvrir_jeu(self):
+        """Fenêtre de jeux, seulement pendant la pause du Pomodoro."""
+        if not self.gardien.en_pause:
+            return False
+        if self.jeu:
+            try:
+                self.jeu.show()
+                self.jeu.restore()
+            except Exception:
+                pass
+            return True
+        api = Api(self, "jeu")
+        fen = self.webview.create_window(f"{NOM} — Pause jeux", url(), js_api=api, width=520, height=700,
+                                         resizable=False, background_color="#F6F4EF")
+        api._fenetre = fen
+        self.jeu = fen
+
+        def ferme():
+            self.jeu = None
+            return True
+
+        fen.events.closing += ferme
+        return True
+
     def montrer(self):
         self.principale.show()
         self.principale.restore()
 
     # --- mini Gardien qui se promène en bas de l'écran ---
-    LARGEUR_C, HAUTEUR_C = 300, 240
+    LARGEUR_C, HAUTEUR_C = 300, 300
 
     def creer_compagnon(self):
         api = Api(self, "compagnon")
@@ -393,6 +467,7 @@ class Appli:
                 if time.time() > prochaine_zone:  # l'écran a pu changer (barre des tâches, résolution)
                     p.zone = zone_de_travail()
                     prochaine_zone = time.time() + 10
+                p.dodo = self.gardien.focus_actif or self.gardien.en_travail  # en focus, il dort dans le coin
                 curseur, bouton = souris() if p.mode == "attrape" else (None, False)
                 if taille is None:
                     taille = (fen.width or self.LARGEUR_C, fen.height or self.HAUTEUR_C)

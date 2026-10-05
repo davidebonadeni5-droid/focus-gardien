@@ -36,6 +36,14 @@ toute seule (jamais pendant un Pomodoro). Le mini Gardien te l'annonce.
   **marche au plafond**, puis **redescend en parachute** 🪂 en se balançant (et atterrit avec style 😎). Parfois il oublie
   son parachute… Attrape-le à la souris et **lance-le** : lancé haut, il ouvre son parachute. Clique pour qu'il parle,
   double-clique pour ouvrir l'app.
+- **En mode focus, il dort** 😴 : il va dans le coin en bas à droite, ferme les yeux (« z z z »), ne bouge plus et ne
+  parle plus. Il se réveille à la pause.
+- **Clic sur le mini Gardien = pense-bête** : tes devoirs (à cocher), tes tests, le temps du Pomodoro et tes
+  **notes rapides** à toi (gardées sur ton PC).
+- **Jeux de la pause** 🎮 : pendant la pause du Pomodoro, bouton **Jouer** (sur l'accueil ou dans le pense-bête). Trois jeux
+  au choix : **la tour** (saute de plateforme en plateforme, jetpack sur espace), **la course** (saute par-dessus les livres
+  et les manettes) et **les étoiles** (en parachute, attrape les étoiles, évite les orages). La partie s'arrête toute seule
+  à la fin de la pause, et ton record est gardé.
 - **Stats** : minutes concentré et tentations résistées sur 14 jours, série de jours 🔥.
 - **Apps** : les jeux sont déjà cochés (Steam, Epic, Roblox, Minecraft, Riot, Valorant, Fortnite…), plus tous les jeux
   des dossiers Steam, Epic, Riot, Ubisoft. Ajoute une app par son nom ou en cliquant sur un programme ouvert.
@@ -45,6 +53,8 @@ toute seule (jamais pendant un Pomodoro). Le mini Gardien te l'annonce.
 ![Mini Gardien](captures/mini-gardien.png)
 
 ![Interrogatoire](captures/quiz.png)
+
+![Jeux de la pause](captures/jeux.png)
 
 Fermer la fenêtre ne quitte pas le Gardien : il reste **près de l'horloge**. Pour vraiment le quitter : **Quitter** +
 mot de passe Dadotest (vérifié sur ton PC, ça marche aussi sans internet).

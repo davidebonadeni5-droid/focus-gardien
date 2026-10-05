@@ -216,7 +216,7 @@ body.compagnon,body.compagnon .stage{background:transparent!important}
 body.compagnon #sky,body.compagnon .grain{display:none}
 body.compagnon .stage{position:relative;z-index:2;width:100vw;height:100vh;display:block;padding:0;overflow:hidden}
 .perso{position:absolute;width:100px;height:110px}
-.pose-sol .perso{left:calc(50% - 50px);bottom:0}
+.pose-sol .perso,.pose-dort .perso{left:calc(50% - 50px);bottom:0}
 .pose-plafond .perso{left:calc(50% - 50px);top:0;transform:rotate(180deg)}
 /* sur les murs : debout le long du bord, il monte (ou descend) en jetpack */
 .pose-mur_g .perso{left:4px;top:calc(50% - 55px);transform:rotate(4deg)}
@@ -305,3 +305,53 @@ body.compagnon .stage{position:relative;z-index:2;width:100vw;height:100vh;displ
 .bonhomme.tombe .haut{transform-box:view-box;transform-origin:50px 50px;animation:panique .14s linear infinite alternate}
 @keyframes panique{from{transform:rotate(-10deg)}to{transform:rotate(10deg)}}
 .pose-mur_g .ombre,.pose-mur_d .ombre,.pose-plafond .ombre,.pose-chute .ombre,.pose-attrape .ombre,.pose-parachute .ombre{display:none}
+
+/* ---------- mini Gardien endormi (mode focus) ---------- */
+.bonhomme.dodo .corps{animation:dodo 3.2s ease-in-out infinite;transform-origin:50px 100px}
+.bonhomme.dodo .oeil{animation:none;transform:scaleY(.12)}
+.bonhomme.dodo .jambe{transform:rotate(0)}
+@keyframes dodo{0%,100%{transform:translateY(4px) scale(1.02,.95)}50%{transform:translateY(5px) scale(1.04,.92)}}
+.zzz{display:none;position:absolute;left:calc(50% + 22px);bottom:96px;font:700 15px var(--f-display);color:#FFFDF8;
+  text-shadow:0 0 3px #1A1A18,0 0 1px #1A1A18}
+.pose-dort .zzz{display:block}
+.zzz span{position:absolute;opacity:0;animation:zzz 3s ease-out infinite}
+.zzz span:nth-child(2){animation-delay:1s;font-size:19px}.zzz span:nth-child(3){animation-delay:2s;font-size:23px}
+@keyframes zzz{0%{opacity:0;transform:translate(0,0)}20%{opacity:1}100%{opacity:0;transform:translate(18px,-46px)}}
+
+/* ---------- pense-bête ---------- */
+body.memo{background:var(--bg)}
+body.memo .stage{height:100vh;overflow-y:auto}
+.memo-c{padding:16px 18px 20px;border:1px solid var(--line);min-height:100vh}
+.memo-t{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.memo-t b{font-size:19px;letter-spacing:-.01em}
+.mp{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 12px;border-radius:12px;background:var(--amber-soft)}
+.mp span{font:500 11px var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--amber-ink)}
+.mp b{font-weight:700;font-size:22px;font-variant-numeric:tabular-nums;flex:1}
+.mp.pause{background:#E3F3EB}.mp.pause span{color:var(--leaf)}
+body.memo .lbl{margin:4px 0 4px}
+body.memo .list{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0 12px;margin-bottom:6px}
+body.memo .tests{margin:8px 0 4px}
+#mForm{margin:6px 0 8px}
+#mForm .in{padding:10px 12px;font-size:14px}
+.devoir.note .x{margin-left:auto}
+
+/* ---------- jeux de la pause ---------- */
+body.jeu .stage{height:100vh}
+.jeu-c{height:100vh;padding:14px 20px 18px;display:flex;flex-direction:column}
+.jeu-t{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.jeu-t b{font-size:20px;letter-spacing:-.01em}
+.jeu-menu{display:flex;flex-direction:column;gap:10px}
+.jeu-carte{display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;border:1px solid var(--line);background:var(--card);
+  text-align:left;cursor:pointer;font:inherit;color:inherit;transition:transform .12s,border-color .15s}
+.jeu-carte:hover{border-color:var(--amber);transform:translateY(-2px)}
+.jeu-carte .e{font-size:38px;line-height:1}
+.jeu-carte .nm{flex:1}
+.jeu-carte .nm b{display:block;font-size:17px}
+.jeu-carte .nm small{color:var(--mute);font-size:13px}
+.jeu-carte .rec{font:500 11px/1.3 var(--f-mono);color:var(--mute);text-align:right;text-transform:uppercase;letter-spacing:.06em}
+.jeu-carte .rec b{font-size:15px;color:var(--ink);letter-spacing:0}
+.jeu-zone{position:relative;align-self:center;border-radius:16px;overflow:hidden;border:1px solid var(--line);box-shadow:0 12px 30px rgba(26,26,24,.1)}
+.jeu-zone canvas{display:block;width:480px;height:560px;outline:none}
+.jeu-hud{position:absolute;left:0;right:0;top:0;display:flex;justify-content:space-between;padding:10px 12px;font:600 15px var(--f-mono);pointer-events:none}
+.jeu-hud #jInfo{font-weight:500;font-size:12px;color:var(--mute)}
+.jeu-fin{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;text-align:center;background:rgba(246,244,239,.9);padding:20px}
