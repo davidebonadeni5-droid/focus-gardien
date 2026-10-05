@@ -40,10 +40,11 @@ toute seule (jamais pendant un Pomodoro). Le mini Gardien te l'annonce.
   parle plus. Il se réveille à la pause.
 - **Clic sur le mini Gardien = pense-bête** : tes devoirs (à cocher), tes tests, le temps du Pomodoro et tes
   **notes rapides** à toi (gardées sur ton PC).
-- **Jeux de la pause** 🎮 : pendant la pause du Pomodoro, bouton **Jouer** (sur l'accueil ou dans le pense-bête). Trois jeux
+- **Jeux** 🎮 : bouton **Jouer** sur l'accueil et dans le pense-bête, toujours là **sauf quand tu travailles**
+  (Pomodoro de travail ou mode focus allumé). Trois jeux
   au choix : **la tour** (saute de plateforme en plateforme, jetpack sur espace), **la course** (saute par-dessus les livres
   et les manettes) et **les étoiles** (en parachute, attrape les étoiles, évite les orages). La partie s'arrête toute seule
-  à la fin de la pause, et ton record est gardé.
+  quand le travail recommence, et ton record est gardé.
 - **Stats** : minutes concentré et tentations résistées sur 14 jours, série de jours 🔥.
 - **Apps** : les jeux sont déjà cochés (Steam, Epic, Roblox, Minecraft, Riot, Valorant, Fortnite…), plus tous les jeux
   des dossiers Steam, Epic, Riot, Ubisoft. Ajoute une app par son nom ou en cliquant sur un programme ouvert.

@@ -61,7 +61,7 @@ window.initJeu = async function () {
     $("#jZone").hidden = true;
     const scores = (etatApp && etatApp.scores) || {};
     $("#jMenu").hidden = false;
-    $("#jMenu").innerHTML = `<p class="note" style="margin:0 0 12px">Choisis ton jeu. La partie s'arrête à la fin de la pause.</p>` +
+    $("#jMenu").innerHTML = `<p class="note" style="margin:0 0 12px">Choisis ton jeu. La partie s'arrête quand le travail recommence.</p>` +
       Object.entries(JEUX).map(([cle, j]) => `<button class="jeu-carte" data-j="${cle}"><span class="e">${j.emoji}</span>
         <span class="nm"><b>${j.nom}</b><small>${j.desc}</small></span><span class="rec">Record<br><b>${scores[cle] || 0} ${j.unite}</b></span></button>`).join("");
     $$("#jMenu [data-j]").forEach((b) => b.onclick = () => { sfx.clic(); lancer(b.dataset.j); });
@@ -108,8 +108,8 @@ window.initJeu = async function () {
   const rafraichirEtat = async () => {
     try { etatApp = await api.etat(); } catch { return; }
     const p = etatApp.pomo;
-    if (!p || p.phase !== "pause") return finPause();
-    $("#jPause span").textContent = `Pause · ${mmss(p.reste)}`;
+    if (etatApp.peut_jouer === false) return finPause();  // le travail recommence (ou mode focus allumé)
+    $("#jPause span").textContent = p && p.phase === "pause" ? `Pause · ${mmss(p.reste)}` : "Temps libre";
   };
   const finPause = () => {
     if (finie) return;
@@ -117,7 +117,7 @@ window.initJeu = async function () {
     if (jeu && !jeu.fini && jeu.score > 0) api.score(jeu.cle, Math.floor(jeu.score)).catch(() => {});
     sfx.alerte();
     st.innerHTML = `<div class="jeu-c" style="display:grid;place-items:center;text-align:center"><div><div class="q-badge">💪</div>
-      <h2 class="q-title">La pause est finie !</h2><p class="q-joke">Retour au travail. Les jeux t'attendent à la prochaine pause.</p></div></div>`;
+      <h2 class="q-title">On retourne au travail !</h2><p class="q-joke">Les jeux t'attendent à la prochaine pause.</p></div></div>`;
     setTimeout(() => api.fermer(), 4000);
   };
   await rafraichirEtat();

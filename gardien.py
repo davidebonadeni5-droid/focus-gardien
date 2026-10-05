@@ -211,6 +211,11 @@ class Gardien:
         return bool(self.pomo and self.pomo["phase"] == "travail")
 
     @property
+    def peut_jouer(self):
+        """Les jeux sont permis partout… sauf quand on travaille (Pomodoro de travail ou mode focus allumé)."""
+        return not self.en_travail and not self.focus_actif
+
+    @property
     def en_pause(self):
         return bool(self.pomo and self.pomo["phase"] == "pause")
 
@@ -449,6 +454,7 @@ class Gardien:
             "compte": {"nom": self.compte.nom, "connecte": self.compte.connecte, "erreur": self.erreur_synchro},
             "planning": self.planning(),
             "notes": self.donnees["notes"],
+            "peut_jouer": self.peut_jouer,
             "scores": self.donnees["scores"],
             "version": self.version,
             "annonce": self.annonce,

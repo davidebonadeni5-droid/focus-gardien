@@ -402,8 +402,8 @@ class Appli:
         fen.events.closing += ferme
 
     def ouvrir_jeu(self):
-        """Fenêtre de jeux, seulement pendant la pause du Pomodoro."""
-        if not self.gardien.en_pause:
+        """Fenêtre de jeux : jamais pendant le travail (Pomodoro de travail ou mode focus)."""
+        if not self.gardien.peut_jouer:
             return False
         if self.jeu:
             try:

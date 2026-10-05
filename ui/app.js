@@ -114,6 +114,7 @@ function demo() {
     reglages: { sons: true, demarrage: true, travail: 25, pause: 5, compagnon: true },
     mdp: true, premier_lancement: P.get("bienvenue") === "1", pass: {}, focus: P.get("focus") === "1", version: "12",
     compte: { nom: "david", connecte: P.get("login") !== "1", erreur: null },
+    peut_jouer: true,
     notes: [{ id: "n1", texte: "Acheter un cahier", fait: false }, { id: "n2", texte: "Rendre le livre à Léo", fait: true }],
     scores: { tour: 42 },
     planning: {
@@ -133,9 +134,9 @@ function demo() {
     etat: async () => ({ ...st, stats: stats(),
       pomo: st.pomo && { ...st.pomo, reste: Math.max(0, Math.round((st.pomo.fin - Date.now()) / 1000)),
         progres: 1 - (st.pomo.fin - Date.now()) / (st.reglages.travail * 60000) } }),
-    demarrer_pomodoro: async () => { st.pomo = { phase: "travail", fin: Date.now() + st.reglages.travail * 60000 - 7 * 60000 - 32000 }; },
-    arreter_pomodoro: async () => { st.pomo = null; },
-    mode_focus: async (v) => { st.focus = v; },
+    demarrer_pomodoro: async () => { st.peut_jouer = false; st.pomo = { phase: "travail", fin: Date.now() + st.reglages.travail * 60000 - 7 * 60000 - 32000 }; },
+    arreter_pomodoro: async () => { st.pomo = null; st.peut_jouer = !st.focus; },
+    mode_focus: async (v) => { st.focus = v; st.peut_jouer = !v && !(st.pomo && st.pomo.phase === "travail"); },
     basculer_app: async (cle, v) => { st.apps.find((a) => a.cle === cle).actif = v; },
     supprimer_app: async (cle) => { st.apps = st.apps.filter((a) => a.cle !== cle); },
     ajouter_app: async (cle) => { st.apps.push({ cle, nom: cle[0].toUpperCase() + cle.slice(1), actif: true }); return true; },
@@ -271,7 +272,7 @@ function rendreAccueil() {
   const reste = p ? p.reste : total, prog = p ? p.progres : 0;
   minuteur(reste, prog, phase, etat.stats.aujourdhui.pomodoros);
   $("#btnPomo").textContent = p ? "Arrêter" : "Démarrer";
-  $("#btnJeu").hidden = phase !== "pause";
+  $("#btnJeu").hidden = !etat.peut_jouer;  // toujours là, sauf quand on travaille
   $("#btnPomo").classList.toggle("primary", !p);
 
   // mode focus : allumé à la main, ou forcé pendant le travail d'un Pomodoro
@@ -850,7 +851,8 @@ async function initMemo() {
     sonsActifs = e.reglages.sons;
     const p = e.pomo;
     $("#mPomo").innerHTML = p ? `<div class="mp ${p.phase}"><span>${p.phase === "pause" ? "Pause" : "Focus"}</span><b>${mmss(p.reste)}</b>
-      ${p.phase === "pause" ? '<button class="btn primary small" id="mJeu">Jouer 🎮</button>' : ""}</div>` : "";
+      ${e.peut_jouer ? '<button class="btn primary small" id="mJeu">Jouer 🎮</button>' : ""}</div>`
+      : e.peut_jouer ? '<div class="mp pause"><span>Temps libre</span><b></b><button class="btn primary small" id="mJeu">Jouer 🎮</button></div>' : "";
     const bj = $("#mJeu");
     if (bj) bj.onclick = async () => { sfx.fanfare(); await api.ouvrir_jeu(); fermer(); };
     const s2 = JSON.stringify([e.planning.devoirs, e.planning.tests, e.notes]);
