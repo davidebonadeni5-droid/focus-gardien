@@ -33,6 +33,12 @@
         <button class="btn primary big" id="btnPomo">Démarrer</button>
       </div>
       <p class="resume" id="resume"></p>
+
+      <div class="plan">
+        <div class="plan-tete"><span class="lbl">À faire</span><button class="lien" id="btnSync" title="Synchroniser avec Dadotest">↻ <span id="syncTxt">Dadotest</span></button></div>
+        <div class="card list" id="devoirs"></div>
+        <div class="tests" id="tests"></div>
+      </div>
     </section>
 
     <!-- Statistiques -->
@@ -91,13 +97,12 @@
           <div class="item"><div class="nm"><b>Pause</b><small>minutes</small></div><input class="in" type="number" min="1" max="120" id="rPause"></div>
         </div>
         <div class="card">
-          <div class="lbl">Mot de passe</div>
-          <p class="note" style="margin:6px 0 12px" id="mdpInfo">Il faut ce mot de passe pour quitter le Gardien.</p>
-          <div class="stack" style="margin-top:0;gap:10px">
-            <label class="field" id="mdpOldF"><span>Actuel</span><input class="in" type="password" id="mdpOld"></label>
-            <label class="field"><span>Nouveau</span><input class="in" type="password" id="mdpNew" placeholder="au moins 4 caractères"></label>
+          <div class="lbl">Compte Dadotest</div>
+          <div class="row" style="justify-content:space-between;margin-top:8px">
+            <div><b id="compteNom">—</b><p class="note" style="margin:2px 0 0">Devoirs, tests et cartes viennent de dadotest.ch.</p></div>
+            <button class="btn small danger" id="btnLogout">Se déconnecter</button>
           </div>
-          <div class="row" style="margin-top:12px"><button class="btn primary" id="btnMdp">Enregistrer</button><span class="msg" id="mdpMsg"></span></div>
+          <p class="note" style="margin-top:10px">Pour quitter le Gardien, il faut ton mot de passe Dadotest.</p>
         </div>
         <p class="note" id="version" style="text-align:center"></p>
       </div>
@@ -123,21 +128,24 @@
     <div class="q-badge">🥺</div>
     <h2 class="q-title" style="font-size:28px">Tu veux vraiment me renvoyer ?</h2>
     <p class="q-joke" style="margin-bottom:16px">Sans moi, qui va te protéger de toi-même ?</p>
-    <label class="field" id="quitF"><span>Mot de passe</span><input class="in" type="password" id="quitPw"></label>
+    <label class="field" id="quitF"><span>Mot de passe Dadotest</span><input class="in" type="password" id="quitPw"></label>
     <p class="msg bad" id="quitMsg"></p>
     <div class="row" style="margin-top:16px"><button class="btn primary" id="quitStay">Je reste</button><button class="btn danger" id="quitGo">Quitter le Gardien</button></div>
   </div></div>
 </div>
 
-<div class="modal" id="mWelcome" hidden>
+<div class="modal" id="mLogin" hidden>
   <div class="win"><div class="body">
     <div class="q-badge">🛡️</div>
-    <h2 class="q-title" style="font-size:30px">Salut ! Je suis ton Gardien.</h2>
-    <p class="q-joke" style="margin-bottom:16px">Allume le <b>mode focus</b> quand tu veux bosser : si tu ouvres un jeu, je te pose des questions. Mauvaise réponse, je le ferme.</p>
-    <label class="field"><span>Mot de passe pour pouvoir me quitter</span><input class="in" type="password" id="wPw" placeholder="au moins 4 caractères"></label>
-    <div class="item" style="padding:14px 0 0;border:0"><div class="nm"><b>Démarrer avec Windows</b></div><label class="sw"><input type="checkbox" id="wStart" checked><i></i></label></div>
-    <p class="msg bad" id="wMsg"></p>
-    <button class="btn primary block" style="margin-top:14px" id="wGo">C'est parti</button>
+    <h2 class="q-title" style="font-size:30px">Connecte-toi avec Dadotest</h2>
+    <p class="q-joke" style="margin-bottom:16px">Ton compte <b>dadotest.ch</b> : je récupère tes devoirs, tes tests et tes cartes de révision. Ton mot de passe servira aussi à me quitter.</p>
+    <form id="fLogin" class="stack" style="margin-top:0;gap:10px">
+      <label class="field"><span>Nom d'utilisateur</span><input class="in" id="lNom" autocomplete="username" autocapitalize="off" spellcheck="false"></label>
+      <label class="field"><span>Mot de passe</span><input class="in" type="password" id="lPw" autocomplete="current-password"></label>
+      <div class="item" id="lStartRow" style="padding:4px 0 0;border:0"><div class="nm"><b>Démarrer avec Windows</b></div><label class="sw"><input type="checkbox" id="lStart" checked><i></i></label></div>
+      <p class="msg bad" id="lMsg"></p>
+      <button class="btn primary block" type="submit" id="lGo">Se connecter</button>
+    </form>
   </div></div>
 </div>
 

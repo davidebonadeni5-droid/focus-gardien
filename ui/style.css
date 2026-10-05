@@ -67,6 +67,32 @@ h1.h{margin:18px 0 4px;font-weight:700;font-size:28px;letter-spacing:-.02em}
 .resume{text-align:center;color:var(--mute);font:400 13px/1.4 var(--f-mono);margin:16px 0 0}
 .resume b{color:var(--ink);font-weight:600}
 
+/* devoirs et tests venant de Dadotest */
+.plan{margin-top:26px}
+.plan-tete{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.lien{background:none;border:0;color:var(--mute);font:500 12px var(--f-mono);cursor:pointer;padding:4px 6px;border-radius:7px}
+.lien:hover{color:var(--ink);background:var(--soft)}
+.lien.err{color:var(--bad)}
+.devoir{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--line)}
+.devoir:last-child{border-bottom:0}
+.devoir input{width:18px;height:18px;accent-color:var(--amber);margin:0;flex:none;cursor:pointer}
+.devoir .pt{width:8px;height:8px;border-radius:50%;flex:none}
+.devoir .nm{flex:1;min-width:0}
+.devoir .nm b{display:block;font-weight:600;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.devoir .nm small{font:400 12px var(--f-mono);color:var(--dim)}
+.quand{font:500 12px var(--f-mono);color:var(--mute);white-space:nowrap}
+.quand.urgent{color:var(--bad)}
+.quand.bientot{color:var(--amber-ink)}
+.devoir.fait .nm b{text-decoration:line-through;color:var(--dim)}
+.vide{color:var(--mute);font-size:13.5px;padding:6px 2px}
+.tests{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.test{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:12px;background:var(--card);border:1px solid var(--line);font-size:13.5px}
+.test b{font-weight:600}
+.test .j{font:600 12px var(--f-mono);color:var(--amber-ink);background:var(--amber-soft);padding:3px 7px;border-radius:7px}
+.test.proche .j{color:#fff;background:var(--bad)}
+.q-reponse{margin:0 0 16px;padding:14px 16px;border-radius:12px;background:var(--amber-soft);font-size:17px;font-weight:600}
+.q-note{font:500 12px var(--f-mono);color:var(--dim);margin:-6px 0 14px}
+
 /* ---------- boutons, champs ---------- */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:600 14.5px/1 var(--f-display);padding:12px 18px;border-radius:12px;border:1px solid var(--line);
   background:var(--card);color:var(--ink);cursor:pointer;transition:transform .1s,background .15s,border-color .15s}
@@ -192,8 +218,15 @@ body.compagnon .stage{position:relative;z-index:2;width:100vw;height:100vh;displ
 .perso{position:absolute;width:100px;height:110px}
 .pose-sol .perso{left:calc(50% - 50px);bottom:0}
 .pose-plafond .perso{left:calc(50% - 50px);top:0;transform:rotate(180deg)}
-.pose-mur_g .perso{left:5px;top:calc(50% - 55px);transform:rotate(90deg)}
-.pose-mur_d .perso{right:5px;top:calc(50% - 55px);transform:rotate(-90deg)}
+/* sur les murs : debout contre le bord, il grimpe à une corde qui descend du haut de l'écran.
+   La fenêtre est alors très haute (main.py) et le personnage reste en bas : centre à 120 px du bas. */
+.pose-mur_g .perso{left:6px;bottom:65px}
+.pose-mur_d .perso{right:6px;bottom:65px}
+.corde{display:none;position:absolute;top:0;bottom:140px;width:5px;border-radius:3px;transform-origin:50% 0;
+  background:repeating-linear-gradient(180deg,#8B5A2B 0 7px,#B07A42 7px 14px);box-shadow:1px 0 0 rgba(0,0,0,.25);animation:corde 2.4s ease-in-out infinite alternate}
+.pose-mur_g .corde{display:block;left:97px}
+.pose-mur_d .corde{display:block;right:97px}
+@keyframes corde{from{transform:rotate(-.25deg)}to{transform:rotate(.25deg)}}
 .pose-chute .perso,.pose-attrape .perso{left:calc(50% - 50px);top:calc(50% - 55px)}
 .pose-attrape .perso{animation:balance .9s ease-in-out infinite alternate;transform-origin:50% 0}
 .pose-chute .perso{animation:tourne 1.2s linear infinite}
@@ -202,8 +235,8 @@ body.compagnon .stage{position:relative;z-index:2;width:100vw;height:100vh;displ
 .bulle-pos{position:absolute;width:max-content;max-width:250px}
 .pose-sol .bulle-pos{left:50%;bottom:122px;translate:-50% 0}
 .pose-plafond .bulle-pos{left:50%;top:122px;translate:-50% 0}
-.pose-mur_g .bulle-pos{left:122px;top:50%;translate:0 -50%;max-width:165px}
-.pose-mur_d .bulle-pos{right:122px;top:50%;translate:0 -50%;max-width:165px}
+.pose-mur_g .bulle-pos{left:118px;bottom:120px;translate:0 50%;max-width:165px}
+.pose-mur_d .bulle-pos{right:118px;bottom:120px;translate:0 50%;max-width:165px}
 .pose-chute .bulle-pos,.pose-attrape .bulle-pos{left:50%;bottom:calc(50% + 66px);translate:-50% 0}
 .bulle{position:relative;margin:0;padding:9px 12px;border-radius:14px;
   background:#FFFDF8;border:1.5px solid #1A1A18;color:#1A1A18;
@@ -241,3 +274,4 @@ body.compagnon .stage{position:relative;z-index:2;width:100vw;height:100vh;displ
 @keyframes coucou{from{transform:rotate(0)}to{transform:rotate(-40deg)}}
 @keyframes plume{to{transform:rotate(12deg)}}
 @keyframes ombre{50%{transform:scaleX(.92)}}
+.pose-mur_g .ombre,.pose-mur_d .ombre,.pose-plafond .ombre,.pose-chute .ombre,.pose-attrape .ombre{display:none}

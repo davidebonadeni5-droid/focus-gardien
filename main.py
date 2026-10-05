@@ -19,6 +19,7 @@ import threading
 import time
 from pathlib import Path
 
+import dadotest
 import gardien as g
 import maj
 from promenade import Promenade
@@ -133,6 +134,7 @@ class Api:
     def __init__(self, appli, role, **params):
         self._appli = appli
         self._role = role
+        self._carte = None
         self._params = {"vue": role, **{k: str(v) for k, v in params.items()}}
         self._devoir = None
         self._fenetre = None
@@ -214,9 +216,6 @@ class Api:
             pos, _ = souris()
             appli.promenade.attraper(pos or (appli.promenade.cx, appli.promenade.cy))
 
-    def definir_mdp(self, nouveau, ancien=""):
-        return self._appli.gardien.definir_mot_de_passe(nouveau, ancien)
-
     def fin_premier_lancement(self):
         self._appli.gardien.donnees["premier_lancement"] = False
         self._appli.gardien.sauver()
@@ -234,11 +233,50 @@ class Api:
     def cacher(self):
         self._appli.principale.hide()
 
+    # compte Dadotest
+    def connecter(self, nom, mot_de_passe):
+        gd = self._appli.gardien
+        try:
+            gd.connecter(nom, mot_de_passe)
+        except dadotest.ErreurConnexion as e:
+            return {"ok": False, "erreur": str(e)}
+        if gd.donnees["premier_lancement"]:
+            self.fin_premier_lancement()
+        return {"ok": True}
+
+    def deconnecter(self):
+        self._appli.gardien.deconnecter()
+
+    def synchroniser(self):
+        return self._appli.gardien.synchroniser()
+
+    def cocher_devoir(self, ident, fait):
+        return self._appli.gardien.cocher_devoir(ident, fait)
+
     # interrogatoire
+    def contexte(self):
+        """Devoir pour aujourd'hui/demain pas encore fait, et test dans les 2 jours : le quiz en parle."""
+        p = self._appli.gardien.planning()
+        devoir = next((d for d in p["devoirs"] if d["jours"] is not None and d["jours"] <= 1), None)
+        test = next((t for t in p["tests"] if t["jours"] <= 2), None)
+        return {"devoir": devoir, "test": test}
+
     def devoir(self):
+        carte = self._appli.gardien.carte_au_hasard()
+        if carte:
+            self._carte = carte
+            return {"type": "carte", "q": carte["q"], "note": carte.get("note") or carte.get("course") or ""}
         q, rep = g.question_devoir(self._appli.gardien.donnees["vocabulaire"])
         self._devoir = rep
-        return q
+        return {"type": "calcul", "q": q}
+
+    def reponse_carte(self):
+        return (self._carte or {}).get("a", "")
+
+    def repondre_carte(self, juste):
+        carte, self._carte = self._carte, None
+        if carte:
+            threading.Thread(target=self._appli.gardien.repondre_carte, args=(carte["key"], bool(juste)), daemon=True).start()
 
     def repondre_devoir(self, texte):
         ok = self._devoir is not None and g.normaliser(texte) == g.normaliser(self._devoir)
@@ -345,6 +383,7 @@ class Appli:
         self.promenade = Promenade(zone_de_travail())
         prochaine_zone = 0
         taille = None  # taille réelle de la fenêtre (peut être agrandie par la mise à l'échelle Windows)
+        hauteur_actuelle = None
         while not self.gardien.arret.is_set():
             fen = self.compagnon
             if not fen or not self.compagnon_visible or self.fumee:
@@ -356,12 +395,19 @@ class Appli:
                     p.zone = zone_de_travail()
                     prochaine_zone = time.time() + 10
                 curseur, bouton = souris() if p.mode == "attrape" else (None, False)
-                if p.pas(curseur, bouton):
+                if taille is None:
+                    taille = (fen.width or self.LARGEUR_C, fen.height or self.HAUTEUR_C)
+                change = p.pas(curseur, bouton)
+                haut = p.hauteur_mur(taille[1]) if p.sur_un_mur else taille[1]
+                if haut != hauteur_actuelle:  # la corde : fenêtre haute sur les murs, normale ailleurs
+                    fen.resize(int(taille[0]), int(haut))
+                    hauteur_actuelle = haut
+                    x, y = p.position_fenetre(taille[0], haut)
+                    fen.move(int(x), int(y))
+                if change:
                     fen.evaluate_js(f"window.compagnon && compagnon.pose('{p.mode}', {p.sens}, {'true' if p.pause > 0 else 'false'})")
                 if p.en_mouvement:
-                    if taille is None:
-                        taille = (fen.width or self.LARGEUR_C, fen.height or self.HAUTEUR_C)
-                    x, y = p.position_fenetre(*taille)
+                    x, y = p.position_fenetre(taille[0], haut)
                     fen.move(int(x), int(y))
             except Exception:
                 pass
@@ -408,6 +454,12 @@ class Appli:
                 self.icone.update_menu()
             except Exception:
                 pass
+
+    # --- synchro Dadotest ---
+    def synchro_dadotest(self):
+        while not self.gardien.arret.is_set():
+            self.gardien.synchroniser()
+            self.gardien.arret.wait(600)
 
     # --- mises à jour automatiques ---
     def surveiller_maj(self):
@@ -477,6 +529,7 @@ class Appli:
             threading.Thread(target=self.tester, daemon=True).start()
         else:
             threading.Thread(target=self.surveiller_maj, daemon=True).start()
+        threading.Thread(target=self.synchro_dadotest, daemon=True).start()
 
         def notifications():
             while not self.gardien.arret.is_set():

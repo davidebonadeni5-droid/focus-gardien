@@ -113,6 +113,16 @@ function demo() {
     vocabulaire: [["le chien (allemand)", "der Hund"], ["apprendre (anglais)", "to learn"]],
     reglages: { sons: true, demarrage: true, travail: 25, pause: 5, compagnon: true },
     mdp: true, premier_lancement: P.get("bienvenue") === "1", pass: {}, focus: P.get("focus") === "1", version: "12",
+    compte: { nom: "david", connecte: P.get("login") !== "1", erreur: null },
+    planning: {
+      devoirs: [
+        { id: "t3", titre: "Rédaction : mon héros", jours: -1, nom: "Français", couleur: "#E0572B" },
+        { id: "t2", titre: "Vocabulaire chapitre 3", jours: 0, nom: "Allemand", couleur: "#2E9467" },
+        { id: "t1", titre: "Exercices p. 42 à 44", jours: 1, nom: "Maths", couleur: "#2A5A84" },
+        { id: "t4", titre: "Fiche de lecture", jours: 5, nom: "Français", couleur: "#E0572B" }],
+      tests: [{ id: "e1", titre: "Test fonctions", jours: 2, nom: "Maths", couleur: "#2A5A84" },
+        { id: "e2", titre: "Dictée", jours: 9, nom: "Français", couleur: "#E0572B" }],
+      cartes: 24, cartes_dues: 7, quand: Math.round(Date.now() / 1000) - 180 },
   };
   const stats = () => ({ jours, aujourdhui: jours[13], serie: 5,
     total: { minutes: 1840, resiste: 96, pomodoros: 71, accorde: 23 } });
@@ -131,11 +141,17 @@ function demo() {
     dossiers_jeux: async (v) => { st.dossiers_jeux = v; },
     sauver_vocabulaire: async (v) => { st.vocabulaire = v; },
     reglage: async (k, v) => { st.reglages[k] = v; return true; },
-    definir_mdp: async (n) => n.length >= 4,
     fin_premier_lancement: async () => { st.premier_lancement = false; },
     quitter: async (pw) => pw === "1234",
     cacher: async () => {},
-    devoir: async () => { rep = "56"; return "7 × 8 = ?"; },
+    devoir: async () => P.get("carte") === "1" ? { type: "carte", q: "Que veut dire « der Hund » ?", note: "Allemand · chapitre 3" } : (rep = "56", { type: "calcul", q: "7 × 8 = ?" }),
+    reponse_carte: async () => "le chien",
+    repondre_carte: async () => {},
+    contexte: async () => P.get("contexte") === "1" ? { devoir: { id: "t1", titre: "Exercices p. 42 à 44", jours: 1, nom: "Maths" }, test: { titre: "Test fonctions", jours: 2, nom: "Maths" } } : { devoir: null, test: null },
+    connecter: async (n, pw) => pw === "1234" ? (st.compte.connecte = true, { ok: true }) : { ok: false, erreur: "Nom d'utilisateur ou mot de passe incorrect." },
+    deconnecter: async () => { st.compte.connecte = false; },
+    synchroniser: async () => true,
+    cocher_devoir: async (id) => { st.planning.devoirs = st.planning.devoirs.filter((d) => d.id !== id); return true; },
     repondre_devoir: async (t) => ({ ok: String(t).trim() === rep, bonne: rep }),
     fin: async () => {},
     fermer: async () => {},
@@ -344,15 +360,54 @@ function rendreReglages() {
   const r = etat.reglages;
   $("#rSons").checked = r.sons; $("#rDemarrage").checked = r.demarrage; $("#rCompagnon").checked = r.compagnon;
   $("#rTravail").value = r.travail; $("#rPause").value = r.pause;
-  $("#mdpOldF").hidden = !etat.mdp;
   $("#version").textContent = etat.version ? `Focus Gardien · version ${etat.version}` : "";
-  $("#mdpInfo").textContent = etat.mdp ? "Il faut ce mot de passe pour quitter le Gardien." : "Aucun mot de passe : n'importe qui peut me fermer. Choisis-en un !";
+  $("#compteNom").textContent = etat.compte.connecte ? etat.compte.nom : "Pas connecté";
 }
 
 async function rafraichir() {
   etat = await api.etat();
   sonsActifs = etat.reglages.sons;
   rendreAccueil();
+  rendrePlanning();
+  // connexion Dadotest obligatoire : sans compte, l'écran de connexion reste devant
+  const m = $("#mLogin");
+  if (!etat.compte.connecte && m.hidden) {
+    m.hidden = false;
+    $("#lStartRow").hidden = !etat.premier_lancement;
+    $("#lMsg").textContent = etat.compte.erreur || "";
+    if (etat.compte.nom) $("#lNom").value = etat.compte.nom;
+    setTimeout(() => ($("#lNom").value ? $("#lPw") : $("#lNom")).focus(), 50);
+  }
+}
+
+// devoirs et tests de Dadotest (redessinés seulement quand ils changent)
+let planPrec = "";
+const quandTxt = (j) => j === null ? "" : j < 0 ? (j === -1 ? "hier" : `il y a ${-j} j`) : j === 0 ? "aujourd'hui" : j === 1 ? "demain" : `dans ${j} j`;
+function rendrePlanning() {
+  const p = etat.planning, c = etat.compte;
+  const sync = !c.connecte ? "pas connecté" : c.erreur ? "⚠ " + c.erreur
+    : p.quand ? `Dadotest · ${Math.max(0, Math.round((Date.now() / 1000 - p.quand) / 60))} min` : "Dadotest";
+  $("#syncTxt").textContent = sync;
+  $("#btnSync").classList.toggle("err", !!c.erreur);
+  const cle = JSON.stringify([p.devoirs, p.tests]);
+  if (cle === planPrec) return;
+  planPrec = cle;
+  const devoirs = p.devoirs.slice(0, 6);
+  $("#devoirs").innerHTML = devoirs.length ? devoirs.map((d) => `
+    <label class="devoir"><input type="checkbox" data-id="${esc(d.id)}">
+      <span class="pt" style="background:${esc(d.couleur)}"></span>
+      <span class="nm"><b>${esc(d.titre)}</b><small>${esc(d.nom)}</small></span>
+      <span class="quand ${d.jours !== null && d.jours <= 0 ? "urgent" : d.jours === 1 ? "bientot" : ""}">${quandTxt(d.jours)}</span></label>`).join("")
+    : `<p class="vide">${c.connecte ? "Rien à faire. Profite ! 🎉" : "Connecte-toi pour voir tes devoirs."}</p>`;
+  $$("#devoirs input").forEach((i) => i.onchange = async () => {
+    const ligne = i.closest(".devoir");
+    ligne.classList.toggle("fait", i.checked);
+    if (i.checked) { sfx.fanfare(); confettis(70); } else sfx.clic();
+    await api.cocher_devoir(i.dataset.id, i.checked);
+    setTimeout(rafraichir, 900);
+  });
+  $("#tests").innerHTML = p.tests.slice(0, 3).map((t) => `
+    <span class="test ${t.jours <= 2 ? "proche" : ""}"><span class="j">${t.jours === 0 ? "auj." : "J-" + t.jours}</span><b>${esc(t.titre)}</b><span class="note">${esc(t.nom)}</span></span>`).join("");
 }
 
 window.demanderQuitter = () => {
@@ -402,12 +457,26 @@ async function initMain() {
   $("#rDemarrage").onchange = async (e) => { sfx.clic(); await api.reglage("demarrage", e.target.checked); await rafraichir(); };
   $("#rTravail").onchange = async (e) => { await api.reglage("travail", +e.target.value || 25); await rafraichir(); rendreReglages(); };
   $("#rPause").onchange = async (e) => { await api.reglage("pause", +e.target.value || 5); await rafraichir(); rendreReglages(); };
-  $("#btnMdp").onclick = async () => {
-    const ok = await api.definir_mdp($("#mdpNew").value, $("#mdpOld").value);
-    const m = $("#mdpMsg");
-    m.className = "msg " + (ok ? "ok" : "bad");
-    m.textContent = ok ? "✓ Mot de passe enregistré" : etat.mdp ? "Mot de passe actuel faux (ou nouveau trop court)" : "Au moins 4 caractères";
-    if (ok) { sfx.ok(); $("#mdpOld").value = $("#mdpNew").value = ""; await rafraichir(); rendreReglages(); } else sfx.non();
+  $("#btnLogout").onclick = async () => {
+    if (!confirm("Te déconnecter de Dadotest ? Il faudra te reconnecter pour utiliser le Gardien.")) return;
+    sfx.clic(); await api.deconnecter(); planPrec = ""; await rafraichir();
+  };
+  $("#btnSync").onclick = async () => { sfx.clic(); $("#syncTxt").textContent = "synchro…"; await api.synchroniser(); planPrec = ""; await rafraichir(); };
+  $("#fLogin").onsubmit = async (e) => {
+    e.preventDefault();
+    const nom = $("#lNom").value.trim(), pw = $("#lPw").value;
+    if (!nom || !pw) { sfx.non(); $("#lMsg").textContent = "Il faut ton nom et ton mot de passe Dadotest."; return; }
+    $("#lGo").disabled = true; $("#lGo").textContent = "Connexion…"; $("#lMsg").textContent = "";
+    if (etat.premier_lancement) await api.reglage("demarrage", $("#lStart").checked);
+    const r = await api.connecter(nom, pw);
+    $("#lGo").disabled = false; $("#lGo").textContent = "Se connecter";
+    if (!r.ok) {
+      sfx.non(); $("#lMsg").textContent = r.erreur; $("#lPw").value = "";
+      const w = $("#mLogin .win"); w.classList.remove("shake"); void w.offsetWidth; w.classList.add("shake");
+      return;
+    }
+    $("#lPw").value = ""; $("#mLogin").hidden = true; planPrec = "";
+    sfx.fanfare(); confettis(); await rafraichir();
   };
 
   $("#btnQuit").onclick = window.demanderQuitter;
@@ -420,17 +489,6 @@ async function initMain() {
   $("#quitGo").onclick = quitter;
   $("#quitPw").onkeydown = (e) => { if (e.key === "Enter") quitter(); };
 
-  if (etat.premier_lancement) {
-    $("#mWelcome").hidden = false;
-    $("#wGo").onclick = async () => {
-      const pw = $("#wPw").value;
-      if (pw.length < 4) { sfx.non(); $("#wMsg").textContent = "Au moins 4 caractères, champion."; return; }
-      await api.definir_mdp(pw, "");
-      await api.reglage("demarrage", $("#wStart").checked);
-      await api.fin_premier_lancement();
-      $("#mWelcome").hidden = true; sfx.fanfare(); confettis(); await rafraichir();
-    };
-  }
   if (P.get("page")) montrerPage(P.get("page"));
 }
 
@@ -442,8 +500,17 @@ async function initQuiz() {
   const app = (P.get("app") || "cette app").slice(0, 40);
   const style = STYLES[P.get("style")] || STYLES[pick(Object.keys(STYLES))];
   const f = (t, extra = {}) => t.replace(/\{app\}/g, app).replace(/\{(\w+)\}/g, (m, k) => extra[k] ?? m);
-  const qs = shuffle(QUESTIONS).slice(0, 3);
+  // contexte Dadotest : un devoir pour aujourd'hui/demain pas fini, un test dans les 2 jours
+  let ctx = { devoir: null, test: null };
+  try { ctx = (await api.contexte()) || ctx; } catch { /* pas de Dadotest */ }
+  const qs = shuffle(QUESTIONS).slice(0, ctx.devoir ? 2 : 3);
+  if (ctx.devoir) {
+    const d = ctx.devoir, quand = d.jours < 0 ? "en retard" : d.jours === 0 ? "pour aujourd'hui" : "pour demain";
+    qs.unshift([`Ton devoir « ${d.titre} »${d.nom ? ` (${d.nom})` : ""}, ${quand}, il est fini ?`,
+      [["Oui, il est prêt ✅", 3], ["Pas encore…", -3], ["J'avais oublié qu'il existait 😬", -4]]]);
+  }
   const N = qs.length + 1;
+  const seuil = ctx.test ? 3 : 1;  // plus strict juste avant un test
   let score = 0, i = 0;
 
   const carte = (inner, etape = null) => {
@@ -465,6 +532,7 @@ async function initQuiz() {
     sfx.alerte();
     carte(`<p class="q-app">${esc(app)}</p><h1 class="q-title">Hop hop hop ✋</h1>
       <p class="q-joke ${style.cls}">${esc(f(pick(style.ouverture)))}</p>
+      ${ctx.test ? `<p class="q-reponse" style="font-size:14.5px">📅 ${esc(ctx.test.titre)}${ctx.test.nom ? ` (${esc(ctx.test.nom)})` : ""} ${ctx.test.jours === 0 ? "c'est aujourd'hui" : ctx.test.jours === 1 ? "c'est demain" : `dans ${ctx.test.jours} jours`} : je serai plus strict.</p>` : ""}
       <div class="q-btns"><button class="btn primary block" id="go">D'accord, interroge-moi</button>
       <button class="btn block" id="back">En fait, je retourne travailler</button></div>`);
     $("#go").onclick = () => { sfx.clic(); question(); };
@@ -477,11 +545,10 @@ async function initQuiz() {
     $$("[data-p]", st).forEach((b) => b.onclick = () => { sfx.clic(); score += +b.dataset.p; i++; question(); });
   };
   const devoir = async () => {
-    const q = await api.devoir();
-    const estMaths = /=\s*\?$/.test(q);
-    carte(`<p class="q-app">Question de devoirs 📚</p>
-      ${estMaths ? `<div class="q-math">${esc(q)}</div>` : `<h1 class="q-title">${esc(q)}</h1>`}
-      <input class="in" id="rep" autocomplete="off" ${estMaths ? 'inputmode="numeric"' : ""} placeholder="Ta réponse" style="font-size:18px;margin-bottom:12px">
+    const d = await api.devoir();
+    if (d.type === "carte") return carteRevision(d);
+    carte(`<p class="q-app">Question de devoirs 📚</p><div class="q-math">${esc(d.q)}</div>
+      <input class="in" id="rep" autocomplete="off" inputmode="numeric" placeholder="Ta réponse" style="font-size:18px;margin-bottom:12px">
       <div class="q-btns"><button class="btn primary block" id="val">Valider</button></div>`, qs.length);
     const input = $("#rep"); input.focus();
     const check = async () => {
@@ -495,6 +562,33 @@ async function initQuiz() {
     };
     $("#val").onclick = check;
     input.onkeydown = (e) => { if (e.key === "Enter") check(); };
+  };
+  // carte de révision Dadotest : on réfléchit, on retourne la carte, on dit honnêtement si on savait
+  const carteRevision = (d) => {
+    let n = 4;
+    carte(`<p class="q-app">Carte de révision 🃏</p><h1 class="q-title">${esc(d.q)}</h1>
+      ${d.note ? `<p class="q-note">${esc(d.note)}</p>` : ""}
+      <p class="q-joke">Réfléchis à la réponse dans ta tête…</p>
+      <div class="q-btns"><button class="btn primary block" id="voir" disabled>Voir la réponse (${n})</button></div>`, qs.length);
+    const t = setInterval(() => {
+      n--;
+      const b = $("#voir");
+      if (!b) return clearInterval(t);
+      if (n > 0) b.textContent = `Voir la réponse (${n})`;
+      else { clearInterval(t); b.disabled = false; b.textContent = "Voir la réponse"; }
+    }, 1000);
+    $("#voir").onclick = async () => {
+      sfx.clic();
+      const a = await api.reponse_carte();
+      carte(`<p class="q-app">Carte de révision 🃏</p><h1 class="q-title">${esc(d.q)}</h1>
+        <div class="q-reponse">${esc(a)}</div>
+        <div class="q-btns"><button class="btn primary block" id="oui">Je savais ✅</button><button class="btn block" id="non">Je savais pas ❌</button></div>`, qs.length);
+      $("#oui").onclick = async () => { sfx.ok(); await api.repondre_carte(true); attente(10); };
+      $("#non").onclick = async () => {
+        await api.repondre_carte(false);
+        refus("Pas grave, c'est comme ça qu'on apprend. Cette carte revient demain dans ta révision Dadotest. Révise-la, et après on verra pour " + app + ".", "À réviser 📚");
+      };
+    };
   };
   const attente = (n) => {
     const total = n;
@@ -512,8 +606,9 @@ async function initQuiz() {
     $("#back").onclick = () => { clearInterval(t); refus("L'envie est passée toute seule. Le Gardien est fier de toi.", "Bien joué 🏆"); };
   };
   const verdict = () => {
-    if (score < 1) return refus(f(pick(style.refus)));
-    const min = score >= 5 ? 15 : score >= 3 ? 10 : 5;
+    if (score < seuil) return refus(ctx.test ? `${ctx.test.titre} approche : pas de ${app} maintenant. Révise, tu me remercieras.` : f(pick(style.refus)));
+    let min = score >= 5 ? 15 : score >= 3 ? 10 : 5;
+    if (ctx.test) min = 5;  // la veille d'un test, juste une petite pause
     sfx.ok();
     carte(`<div class="q-badge">✅</div><p class="q-app">${esc(app)}</p><h1 class="q-title">Accordé</h1>
       <p class="q-joke ${style.cls}">${esc(f(pick(style.accord), { min }))}</p>
@@ -593,7 +688,7 @@ async function initCompagnon() {
   document.documentElement.style.colorScheme = "normal";
   document.documentElement.style.background = "transparent";
   const st = $("#stage"); st.hidden = false;
-  st.innerHTML = `<div class="bulle-pos"><div class="bulle" id="bulle"></div></div>
+  st.innerHTML = `<div class="corde"></div><div class="bulle-pos"><div class="bulle" id="bulle"></div></div>
     <div class="perso"><div class="bonhomme" id="bh" title="Mini Gardien">${BONHOMME}</div></div>`;
   st.className = "stage pose-sol";
   const bh = $("#bh"), bulle = $("#bulle");
@@ -616,12 +711,13 @@ async function initCompagnon() {
     st.className = "stage pose-" + mode;
     const marche = !arret && ["sol", "plafond", "mur_g", "mur_d"].includes(mode);
     bh.classList.toggle("marche", marche);
-    bh.classList.toggle("gauche", mode === "plafond" ? sens > 0 : sens < 0);
+    // sur les murs il regarde vers l'écran, la main levée tient la corde
+    bh.classList.toggle("gauche", mode === "mur_d" ? true : mode === "mur_g" ? false : mode === "plafond" ? sens > 0 : sens < 0);
     if (mode !== posePrec) {
-      if (mode === "chute") dire(pick(["Aaaaah ! 😱", "Woooo ! 🪂", "Je glisse !!"]), 2500);
+      if (mode === "chute") dire(posePrec === "mur_g" || posePrec === "mur_d" ? pick(["La corde a lâché ! 😱", "Aaaaah, ma corde !!"]) : pick(["Aaaaah ! 😱", "Woooo ! 🪂", "Je glisse !!"]), 2500);
       else if (mode === "attrape") dire(pick(["Hé ! Pose-moi ! 😵", "Wheee ! 🎢", "Doucement ! J'ai le vertige !"]), 3000);
       else if (posePrec === "chute" && mode === "sol") dire(pick(["Ouf… ça va 😅", "Atterrissage parfait. Enfin presque.", "Même pas mal !"]), 3500);
-      else if ((mode === "mur_g" || mode === "mur_d") && Math.random() < 0.3) dire(pick(["Je grimpe ! 🧗", "Spider-Gardien !"]), 3000);
+      else if ((mode === "mur_g" || mode === "mur_d") && Math.random() < 0.3) dire(pick(["Je grimpe ! 🧗", "Heureusement que j'ai ma corde !", "Oh hisse ! 🪢"]), 3000);
       else if (mode === "plafond" && Math.random() < 0.4) dire(pick(["La tête à l'envers, je réfléchis mieux 🙃", "Vue d'en haut : tu bosses bien !"]), 3500);
     }
     posePrec = mode;
@@ -653,7 +749,14 @@ async function initCompagnon() {
         else if (phase === "travail") dire("On y retourne, champion !", 6000);
         else dire("Pomodoro arrêté. Je reste là, hein.", 5000);
       } else if (Date.now() > prochaine && Date.now() > finBulle) {
-        dire(pick(PHRASES[phase]).replace("{reste}", reste), 6000);
+        const pl = e.planning || { devoirs: [], tests: [], cartes_dues: 0 };
+        const perso = [];
+        for (const d of pl.devoirs.filter((x) => x.jours !== null && x.jours <= 1).slice(0, 2))
+          perso.push(d.jours < 0 ? `« ${d.titre} » est en retard… on s'y met ? 😬` : `Psst… « ${d.titre} » c'est pour ${d.jours === 0 ? "aujourd'hui" : "demain"} 📚`);
+        for (const t of pl.tests.filter((x) => x.jours <= 3).slice(0, 1))
+          perso.push(t.jours === 0 ? `${t.titre} aujourd'hui ! Tu vas gérer 💪` : `${t.titre} dans ${t.jours} jour${t.jours > 1 ? "s" : ""}. On révise ? 🧠`);
+        if (pl.cartes_dues > 0) perso.push(`${pl.cartes_dues} carte${pl.cartes_dues > 1 ? "s" : ""} à réviser sur Dadotest 🃏`);
+        dire(perso.length && phase !== "travail" && Math.random() < 0.5 ? pick(perso) : pick(PHRASES[phase]).replace("{reste}", reste), 6000);
       } else { avant = { phase, res, interrogatoire: e.interrogatoire }; return; }
       const [a, b] = { libre: [40, 80], travail: [120, 200], pause: [50, 90] }[phase];
       prochaine = Date.now() + (a + Math.random() * (b - a)) * 1000;

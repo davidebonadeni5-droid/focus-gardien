@@ -156,15 +156,25 @@ class Promenade:
             self.sens = sens_retour
 
     # ---------- placement de la fenêtre ----------
+    @property
+    def sur_un_mur(self):
+        return self.mode in ("mur_g", "mur_d")
+
+    def hauteur_mur(self, hauteur):
+        """Sur un mur, la fenêtre est très haute : la corde part au-dessus du haut de l'écran."""
+        g, h, d, b = self.zone
+        return (b - h) + hauteur + 120
+
     def position_fenetre(self, largeur, hauteur):
-        """Coin haut-gauche de la fenêtre pour que le personnage touche le bon bord de l'écran."""
+        """Coin haut-gauche de la fenêtre pour que le personnage touche le bon bord de l'écran.
+        Sur un mur, `hauteur` est la grande hauteur et le personnage est à 120 px du bas de la fenêtre."""
         g, h, d, b = self.zone
         if self.mode == "sol":
             return self.cx - largeur / 2, b - hauteur
         if self.mode == "plafond":
             return self.cx - largeur / 2, h
         if self.mode == "mur_g":
-            return g, self.cy - hauteur / 2
+            return g, self.cy - (hauteur - 120)
         if self.mode == "mur_d":
-            return d - largeur, self.cy - hauteur / 2
+            return d - largeur, self.cy - (hauteur - 120)
         return self.cx - largeur / 2, self.cy - hauteur / 2

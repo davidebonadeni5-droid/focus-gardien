@@ -17,6 +17,8 @@ from pathlib import Path
 
 import psutil
 
+import dadotest
+
 if os.environ.get("FOCUS_GARDIEN_DONNEES"):  # pour les tests
     DOSSIER_DONNEES = Path(os.environ["FOCUS_GARDIEN_DONNEES"])
 elif os.name == "nt":
@@ -94,6 +96,9 @@ class Gardien:
         self.focus_actif = False  # le mode focus s'active à la main ; sans lui (et sans Pomodoro) rien n'est bloqué
         self.evenements = []  # messages à afficher (toasts) : main.py les vide
         self.arret = threading.Event()
+        compte = self.donnees["dadotest"]
+        self.compte = dadotest.Compte(compte.get("nom", ""), dadotest.deproteger(compte.get("cookie", "")) if compte.get("cookie") else "")
+        self.erreur_synchro = None
 
     # ---------- données ----------
     def _charger(self):
@@ -110,6 +115,8 @@ class Gardien:
             d["reglages"].setdefault(k, v)
         d.setdefault("mdp", None)  # {"sel", "hash"}
         d.setdefault("premier_lancement", True)
+        d.setdefault("dadotest", {"nom": "", "cookie": ""})  # cookie chiffré par Windows
+        d.setdefault("cache_dadotest", {"plan": None, "deck": [], "quand": 0})
         return d
 
     def sauver(self):
@@ -155,8 +162,8 @@ class Gardien:
     def a_mot_de_passe(self):
         return bool(self.donnees.get("mdp"))
 
-    def definir_mot_de_passe(self, nouveau, ancien=""):
-        if self.a_mot_de_passe() and not self.verifier_mot_de_passe(ancien):
+    def definir_mot_de_passe(self, nouveau, ancien="", forcer=False):
+        if not forcer and self.a_mot_de_passe() and not self.verifier_mot_de_passe(ancien):
             return False
         if len(nouveau) < 4:
             return False
@@ -170,6 +177,116 @@ class Gardien:
         if not mdp:
             return True
         return secrets.compare_digest(hacher(essai or "", mdp["sel"]), mdp["hash"])
+
+    # ---------- compte Dadotest ----------
+    def _garder_cookie(self):
+        self.donnees["dadotest"] = {"nom": self.compte.nom,
+                                    "cookie": dadotest.proteger(self.compte.cookie) if self.compte.cookie else ""}
+        self.sauver()
+
+    def connecter(self, nom, mot_de_passe):
+        """Connexion Dadotest. Le mot de passe sert aussi (en local) à quitter le Gardien. Lève ErreurConnexion."""
+        self.compte.connecter(nom.strip(), mot_de_passe)
+        self.definir_mot_de_passe(mot_de_passe, forcer=True)  # on ne garde qu'une empreinte, jamais le mot de passe
+        self.erreur_synchro = None
+        self._garder_cookie()
+        self.synchroniser()
+
+    def deconnecter(self):
+        self.compte.deconnecter()
+        self.donnees["cache_dadotest"] = {"plan": None, "deck": [], "quand": 0}
+        self._garder_cookie()
+
+    def synchroniser(self):
+        """Récupère devoirs, tests et cartes. Garde une copie pour quand il n'y a pas internet."""
+        if not self.compte.connecte:
+            return False
+        cache = self.donnees["cache_dadotest"]
+        try:
+            cache["plan"] = self.compte.planning()
+            try:
+                cache["deck"] = self.compte.revision().get("deck", [])
+            except dadotest.ErreurConnexion:
+                cache["deck"] = []  # compte sans accès aux notes : pas de cartes
+            cache["quand"] = time.time()
+            self.erreur_synchro = None
+            return True
+        except dadotest.NonConnecte:
+            self.erreur_synchro = "Session Dadotest expirée : reconnecte-toi."
+            return False
+        except (dadotest.ErreurConnexion, OSError, ValueError) as e:
+            self.erreur_synchro = str(e) or "dadotest.ch ne répond pas."
+            return False
+        finally:
+            self._garder_cookie()  # le site a pu renouveler la session
+
+    def cocher_devoir(self, ident, fait):
+        plan = self.donnees["cache_dadotest"].get("plan") or {}
+        for t in plan.get("tasks", []):
+            if t.get("id") == ident:
+                t["done"] = bool(fait)
+        self.sauver()
+        try:
+            self.compte.cocher_devoir(ident, fait)
+            return True
+        except (dadotest.NonConnecte, dadotest.ErreurConnexion, OSError) as e:
+            self.erreur_synchro = str(e) or "Impossible d'envoyer à dadotest.ch."
+            return False
+        finally:
+            self._garder_cookie()
+
+    def repondre_carte(self, cle, juste):
+        for c in self.donnees["cache_dadotest"].get("deck", []):
+            if c.get("key") == cle:
+                c["isDue"] = False
+        try:
+            self.compte.repondre_carte(cle, juste)
+        except (dadotest.NonConnecte, dadotest.ErreurConnexion, OSError):
+            pass  # pas grave : la carte reviendra
+        self._garder_cookie()
+
+    def planning(self):
+        """Devoirs à faire, tests à venir et cartes à réviser, prêts à afficher."""
+        cache = self.donnees["cache_dadotest"]
+        plan = cache.get("plan") or {}
+        matieres = {m.get("id"): m for m in plan.get("subjects", [])}
+        auj = dt.date.today()
+
+        def jours(date):
+            try:
+                return (dt.date.fromisoformat(date) - auj).days
+            except (TypeError, ValueError):
+                return None
+
+        def matiere(ident):
+            m = matieres.get(ident) or {}
+            return {"nom": m.get("name", ""), "couleur": m.get("color", "#9A988F")}
+
+        devoirs = []
+        for t in plan.get("tasks", []):
+            if t.get("done"):
+                continue
+            j = jours(t.get("due"))
+            devoirs.append({"id": t.get("id"), "titre": t.get("title", "Devoir"), "jours": j, **matiere(t.get("subj"))})
+        devoirs.sort(key=lambda x: (x["jours"] is None, x["jours"] if x["jours"] is not None else 0))
+        tests = []
+        for e in plan.get("tests", []):
+            j = jours(e.get("date"))
+            if j is not None and j >= 0:
+                tests.append({"id": e.get("id"), "titre": e.get("title", "Test"), "jours": j, "sujets": e.get("topics", ""),
+                              **matiere(e.get("subj"))})
+        tests.sort(key=lambda x: x["jours"])
+        deck = cache.get("deck") or []
+        return {"devoirs": devoirs, "tests": tests, "cartes": len(deck), "cartes_dues": sum(1 for c in deck if c.get("isDue")),
+                "quand": int(cache.get("quand") or 0)}
+
+    def carte_au_hasard(self):
+        """Une carte de révision (en priorité une qui est à revoir aujourd'hui), ou None."""
+        deck = [c for c in self.donnees["cache_dadotest"].get("deck", []) if c.get("q") and c.get("a")]
+        if not deck:
+            return None
+        dues = [c for c in deck if c.get("isDue")]
+        return random.choice(dues or deck)
 
     # ---------- apps surveillées ----------
     def identifier(self, info):
@@ -293,6 +410,8 @@ class Gardien:
             "pass": {c: int(f - maintenant) for c, f in self.pass_jusqua.items() if f > maintenant},
             "interrogatoire": self.en_cours["nom"] if self.en_cours else None,
             "focus": self.focus_actif,
+            "compte": {"nom": self.compte.nom, "connecte": self.compte.connecte, "erreur": self.erreur_synchro},
+            "planning": self.planning(),
             "version": self.version,
             "annonce": self.annonce,
         }
